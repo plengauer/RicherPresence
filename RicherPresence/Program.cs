@@ -25,7 +25,7 @@ AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport
 Sdk.CreateTracerProviderBuilder()
     .SetSampler(new AlwaysOnSampler())
     .AddSource(Observability.ACTIVITY_SOURCE_NAME)
-    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("RDR2 Discord Rich Presence").AddAttributes(dt_metadata))
+    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Discord Richer Presence").AddAttributes(dt_metadata))
     .AddOtlpExporter(options =>
     {
         options.Endpoint = new Uri("https://ldj78075.sprint.dynatracelabs.com/api/v2/otlp/v1/traces");
@@ -42,11 +42,11 @@ Sdk.CreateMeterProviderBuilder()
     {
         cfg.Url = "https://ldj78075.sprint.dynatracelabs.com/api/v2/metrics/ingest";
         cfg.ApiToken = "dt0c01.TFMGCJDV6345JGVKAM5DSUQT.7N4DX4NFSTS2LRGTCWGZRFUEC6ZFPS23QKD4IW7HX4OIMHW64X53K5JYRGMDE437";
-        cfg.DefaultDimensions = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("service.name", "RDR2 Discord Rich Presence") };
+        cfg.DefaultDimensions = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("service.name", "Discord Richer Presence") };
     })
     .Build();
 
-Screen screen = new NvidiaEncDXGIOutputDuplication();
+Screen screen = new DXGIOutputDuplication();
 OCR ocr = new Tesseract();
 
 using (RDR2RichPresenceManager presence = new RDR2RichPresenceManager(screen, ocr, 1000))
