@@ -39,9 +39,9 @@ public class RDR2FreeRoamDetector : RDR2ActivityDetector
         else if (text.FuzzyContains("CRAFT", 0.9)) newActionString = "Crafting";
         else if (text.FuzzyContains("TRACK", 0.9) || text.FuzzyContains("FOCUS ON", 0.9)) newActionString = "Tracking";
         else if (text.FuzzyContains("LOOT", 0.9)) newActionString = "Looting";
-        else if (text.FuzzyContains("INVESTIGATING", 0.9)) newActionString = "Being Investigated";
-        else if (text.FuzzyContains("WITNESS", 0.9)) newActionString = "Being snitched on for " + ParseCrime(text);
-        else if (text.FuzzyContains("WANTED", 0.9)) newActionString = "Wanted for " + ParseCrime(text);
+        // else if (text.FuzzyContains("INVESTIGATING", 0.9)) newActionString = "Being investigated";
+        // else if (text.FuzzyContains("WITNESS", 0.9)) newActionString = "Being snitched on for " + ParseCrime(text);
+        // else if (text.FuzzyContains("WANTED", 0.9)) newActionString = "Wanted for " + ParseCrime(text);
         else if (text.FuzzyContains("CLEAN", 0.9)) newActionString = "Maintaining Weapons";
         else if (text.FuzzyContains("EAT", 0.9) && !text.FuzzyContains("SEAT", 0.95)) newActionString = "Eating";
         else if (text.FuzzyContains("DRINK", 0.9)) newActionString = "Drinking";

@@ -288,7 +288,7 @@ namespace Test
                new Discord.Activity[]
                {
                   new Discord.Activity { },
-                  new Discord.Activity { Details = "Make It Count" },
+                  new Discord.Activity { Details = "Showdown: Make It Count" },
                   new Discord.Activity { },
                },
                SimulateDirectoryWithVideo(PATH + "\\Showdowns\\Make It Count\\")
@@ -302,7 +302,7 @@ namespace Test
                new Discord.Activity[]
                {
                   new Discord.Activity { },
-                  new Discord.Activity { Details = "Overrun" },
+                  new Discord.Activity { Details = "Showdown: Overrun" },
                   new Discord.Activity { },
                },
                SimulateDirectoryWithVideo(PATH + "\\Showdowns\\Overrun\\")
@@ -316,7 +316,7 @@ namespace Test
                new Discord.Activity[]
                {
                   new Discord.Activity { },
-                  new Discord.Activity { Details = "Spoils of War" },
+                  new Discord.Activity { Details = "Showdown: Spoils of War" },
                   new Discord.Activity { },
                },
                SimulateDirectoryWithVideo(PATH + "\\Showdowns\\Spoils of War\\")
@@ -330,7 +330,7 @@ namespace Test
                new Discord.Activity[]
                {
                   new Discord.Activity { },
-                  new Discord.Activity { Details = "Up in Smoke" },
+                  new Discord.Activity { Details = "Showdown: Up in Smoke" },
                   new Discord.Activity { },
                },
                SimulateDirectoryWithVideo(PATH + "\\Showdowns\\Up in Smoke\\")
@@ -344,7 +344,7 @@ namespace Test
                new Discord.Activity[]
                {
                   new Discord.Activity { },
-                  new Discord.Activity { Details = "Trade Route", State = "Protecting the Train" },
+                  new Discord.Activity { Details = "Event: Trade Route", State = "Protecting the Baggage Train" },
                   new Discord.Activity { },
                },
                SimulateDirectoryWithVideo(PATH + "\\Trader\\Trade Route\\1")
@@ -358,7 +358,7 @@ namespace Test
                new Discord.Activity[]
                {
                   new Discord.Activity { },
-                  new Discord.Activity { Details = "Trade Route", State = "Protecting the Train" },
+                  new Discord.Activity { Details = "Event: Trade Route", State = "Protecting the Train" },
                   new Discord.Activity { },
                },
                SimulateDirectoryWithVideo(PATH + "\\Trader\\Trade Route\\2")
@@ -712,20 +712,19 @@ namespace Test
                 new Discord.Activity[]
                 {
                     new Discord.Activity { },
-                    new Discord.Activity { Details = "Railroad Baron" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Competing" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Attacking" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Defending" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Competing" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Defending" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Competing" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Defending" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Competing" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Defending" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Competing" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Defending" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Competing" },
-                    new Discord.Activity { Details = "Railroad Baron", State = "Defending" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Competing" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Attacking" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Defending" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Competing" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Defending" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Competing" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Defending" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Competing" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Defending" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Competing" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Defending" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Competing" },
+                    new Discord.Activity { Details = "Event: Railroad Baron", State = "Defending" },
                     new Discord.Activity { },
                 },
                 SimulateDirectoryWithVideo(PATH + "\\Freeroam Events\\Railroad Baron\\1")
@@ -739,7 +738,7 @@ namespace Test
                 new Discord.Activity[]
                 {
                     new Discord.Activity { },
-                    new Discord.Activity { Details = "Railroad Baron" },
+                    new Discord.Activity { Details = "Event: Railroad Baron" },
                     new Discord.Activity { },
                 },
                 SimulateDirectoryWithVideo(PATH + "\\Freeroam Events\\Railroad Baron\\2")
@@ -753,7 +752,7 @@ namespace Test
                 new Discord.Activity[]
                 {
                     new Discord.Activity { },
-                    new Discord.Activity { Details = "Railroad Baron" },
+                    new Discord.Activity { Details = "Event: Railroad Baron" },
                     new Discord.Activity { },
                 },
                 SimulateDirectoryWithVideo(PATH + "\\Freeroam Events\\Railroad Baron\\3")
@@ -767,7 +766,7 @@ namespace Test
                 new Discord.Activity[]
                 {
                     new Discord.Activity { },
-                    new Discord.Activity { Details = "Fool's Gold" },
+                    new Discord.Activity { Details = "Event: Fool's Gold" },
                     new Discord.Activity { },
                 },
                 SimulateDirectoryWithVideo(PATH + "\\Freeroam Events\\Fools Gold\\1")
@@ -781,7 +780,7 @@ namespace Test
                 new Discord.Activity[]
                 {
                     new Discord.Activity { },
-                    new Discord.Activity { Details = "Cold Dead Hands" },
+                    new Discord.Activity { Details = "Event: Cold Dead Hands" },
                     new Discord.Activity { },
                 },
                 SimulateDirectoryWithVideo(PATH + "\\Freeroam Events\\Cold Dead Hands\\1")
@@ -795,7 +794,7 @@ namespace Test
                 new Discord.Activity[]
                 {
                     new Discord.Activity { },
-                    new Discord.Activity { Details = "Dispatch Rider" },
+                    new Discord.Activity { Details = "Event: Dispatch Rider" },
                     new Discord.Activity { },
                 },
                 SimulateDirectoryWithVideo(PATH + "\\Freeroam Events\\Dispatch Rider\\1")
@@ -809,7 +808,7 @@ namespace Test
                 new Discord.Activity[]
                 {
                     new Discord.Activity { },
-                    new Discord.Activity { Details = "King of the Castle" },
+                    new Discord.Activity { Details = "Event: King of the Castle" },
                     new Discord.Activity { },
                 },
                 SimulateDirectoryWithVideo(PATH + "\\Freeroam Events\\King of the Castle\\1")

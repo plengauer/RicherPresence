@@ -8,10 +8,6 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 
-//TODO if we need more speed, to some parallel OCR'ing
-//TODO capture individual parts to improve accuracy, ffmpeg can crop on the fly
-//TODO check whether ffmpeg and tesseract can handle several ones at a time
-
 public class RDR2RichPresenceManager : RichPresenceManager
 {
 
@@ -49,6 +45,10 @@ public class RDR2RichPresenceManager : RichPresenceManager
     private RDR2InfoParser location;
     private RDR2ActivityDetector[] detectors;
 
+    //TODO split into a RicherPresenceManager and an extending RDR2RicherPresenceManager, as a second step maybe not inherit but use a strategy?
+    //TODO make some detector base classes, like for showdowns, with lobby screen, and so on
+    // for example we can check lobby screen, and if that is gone for several seconds, lets assume it started
+    // also, try to parse the timer
     public RDR2RichPresenceManager(Screen screen, OCR ocr, int sleepTime, bool waitOnOverflow = true, bool deleteCaptures = true) : base("RDR2")
     {
         this.screen = screen;
@@ -92,27 +92,54 @@ public class RDR2RichPresenceManager : RichPresenceManager
             new RDR2GenericMissionDetector(new string[] { "DESTROY SUPPLIES", "DESTROY THE SUPPLIES" }, new string[] { "THE SUPPLIES WERE DESTROYED" }, 1000 * 60 * 15, _ => location.Get(), _ => "Destroying Supplies"),
             // bloodmoney missions
             // TODO
-            new RDR2GenericMissionDetector(new string[] { "search", "for the valuables" }, new string[] { "ROBBERY SUCCESSFULL", "HOMESTEAD ROBBED" }, 1000 * 60 * 10, _ => location.Get(), _ => "Robbing a Homestead"),
+            new RDR2GenericMissionDetector(new string[] { "search", "for the valuables" }, new string[] { "ROBBERY SUCCESSFUL", "ROBBERY FAILED", "HOMESTEAD ROBBED" }, 1000 * 60 * 10, _ => location.Get(), _ => "Robbing a Homestead"),
             // bloodmoney opportunity
             //TODO
             // posse activities
             new RDR2GenericMissionDetector(new string[] { "INFIGHTING" }, new string[] { "INFIGHTING WON", "INFIGHTING LOST" }, 1000 * 60 * 10, _ => location.Get(), _ => "Infighting"),
             // showdowns
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "HEAD FOR THE HILLS" },   new string[] { }, 1000 * 60 * (10 * 2), _ => "Head for the Hills", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "PUBLIC ENEMY" },         new string[] { }, 1000 * 60 * (10 * 2), _ => "Public Enemy", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "SPORT OF KINGS" },       new string[] { }, 1000 * 60 * (10 * 2), _ => "Sport of Kings", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "OVERRUN" },              new string[] { }, 1000 * 60 * (10 * 2), _ => "Overrun", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "PLUNDER" },              new string[] { }, 1000 * 60 * (10 * 2), _ => "Plunder", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "SPOILS OF WAR" },        new string[] { }, 1000 * 60 * (10 * 2), _ => "Spoils of War", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "UP IN SMOKE" },          new string[] { }, 1000 * 60 * (10 * 2), _ => "Up in Smoke", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "SHOOTOUT" },             new string[] { }, 1000 * 60 * (10 * 2), _ => "Shootout", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "GUN RUSH" },             new string[] { }, 1000 * 60 * (10 * 2), _ => "Gun Rush", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "HOSTILE TERRITORY" },    new string[] { }, 1000 * 60 * (10 * 2), _ => "Hostile Territory", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "NAME YOUR WEAPON" },     new string[] { }, 1000 * 60 * (10 * 2), _ => "Name Your Weapon", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "MOST WANTED" },          new string[] { }, 1000 * 60 * (10 * 2), _ => "Most Wanted", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "Players", "Game Details", "Purchases", "Quit to Free Roam", "MAKE IT COUNT" },        new string[] { }, 1000 * 60 * (10 * 2), _ => "Make It Count", _ => null),
+            new RDR2ShowdownDetector("Head for the Hills", _ => null),
+            new RDR2ShowdownDetector("Public Enemy", _ => null),
+            new RDR2ShowdownDetector("Sport of Kings",  _ => null),
+            new RDR2ShowdownDetector("Overrun", _ => null),
+            new RDR2ShowdownDetector("Plunder", _ => null),
+            new RDR2ShowdownDetector("Spoils of War", _ => null),
+            new RDR2ShowdownDetector("Up in Smoke", _ => null),
+            new RDR2ShowdownDetector("Shootout", _ => null),
+            new RDR2ShowdownDetector("Gun Rush", _ => null),
+            new RDR2ShowdownDetector("Hostile Territory", _ => null),
+            new RDR2ShowdownDetector("Name Your Weapon", _ => null),
+            new RDR2ShowdownDetector("Most Wanted", _ => null),
+            new RDR2ShowdownDetector("Make It Count", _ => null),
             // races
             // TODO
+            // free roam events
+            new RDR2FreeRoamEventDetector("King of the Castle", "CAPTURE & CONTROL THE AREAS", _ => null),
+            new RDR2FreeRoamEventDetector("Cold Dead Hands", "HOLD A BAG", text => {
+                if (text.FuzzyContains("Pick up a bag", 0.9)) return "Competing";
+                else if (text.FuzzyContains("Take a bag from ", 0.8)) return "Attacking";
+                else if (text.FuzzyContains("Hold the bag", 0.8)) return "Defending";
+                else return null;
+            }),
+            new RDR2FreeRoamEventDetector("Railroad Baron", "CAPTURE AND CONTROL THE TRAIN CAR", text => {
+                if (text.FuzzyContains("Gain control of the train car from ", 0.9)) return "Attacking";
+                else if (text.FuzzyContains("Gain control of the train car ", 0.8)) return "Competing";
+                else if (text.FuzzyContains("Defend the train car", 0.8) || text.FuzzyContains("Help defend the train car", 0.8)) return "Defending";
+                else return null;
+            }),
+            new RDR2FreeRoamEventDetector("Fool's Gold", "GET THE GOLDEN ARMOR AND TAKE OUT PLAYERS TO EARN POINTS", _ => null),
+            new RDR2FreeRoamEventDetector("Wildlife Photographer", "TAKE THE BEST PHOTOGRAPHS OF ANIMALS TO EARN POINTS", _ => null),
+            new RDR2FreeRoamEventDetector("Dispatch Rider", "DELIVER THE HORSE", _ => null),
+            new RDR2FreeRoamEventDetector("Master Archer", "SHOOT THE TARGETS", _ => null),
+            // free roam events (roles)
+            new RDR2FreeRoamEventDetector("Protect Legendary Animal", "WORK TOGETHER AND RELEASE THE LEGENDARY", _ => null),
+            new RDR2FreeRoamEventDetector("Day of Reckoning", "CAPTURE BOUNTY TARGETS AND SCORE THE MOST POINTS", _ => null),
+            new RDR2FreeRoamEventDetector("Animal Tagging", "SEDATE AND TAG AS MANY ANIMALS AS POSSIBLE", _ => null),
+            new RDR2FreeRoamEventDetector("Man Hunt", "WORK TOGETHER AND CAPTURE THE BOUNTY TARGETS", _ => null),
+            new RDR2FreeRoamEventDetector("Trade Route", "WORK TOGETHER AND PROTECT THE GOODS", _ => "Protecting the Baggage Train"),
+            new RDR2FreeRoamEventDetector("Condor Egg", "FIND THE CONDOR EGG WORTH", _ => "Searching the Condor Egg"),
+            new RDR2FreeRoamEventDetector("Salvage", "SEARCH THE COLLECTIBLES", _ => null),
+            new RDR2CallToArmsDetector(),
             // bounty hunter activities
             new RDR2GenericMissionDetector(new string[] { "BOUNTY HUNTER", "CAPTURE" }, new string[] { "BOUNTY COMPLETE", "BOUNTY DELIVERED" }, 1000 * 60 * 20, _ => location.Get(), _ => "Bounty Hunting"),
             new RDR2GenericMissionDetector(new string[] { "Kill the Bounty Hunters" }, new string[] { "HUNT OVER", "YOU SURVIVED" }, 1000 * 60 * 30, _ => location.Get(), _ => "Running from Bounty Hunters"),
@@ -127,37 +154,9 @@ public class RDR2RichPresenceManager : RichPresenceManager
             new RDR2GenericMissionDetector(new string[] { "MOONSHINER", "CLEAR OUT THE REVENUE AGENTS" }, new string[] { "MASH INGREDIENTS COST REDUCED", "ROADBLOCK CLEARED" }, 1000 * 60 * 10, _ => location.Get(), _ => "Clearing a Roadblock"),
             // TODO destroying supplies, escorting patron, rescuing buyer
             new RDR2MoonshineDeliveryDetector(),
-            // TODO sale
             // naturalist activities
             new RDR2GenericMissionDetector(new string[] { "NATURALIST", "RETRIEVE A SAMPLE FROM THE LEGENDARY" }, new string[] { "SAMPLE RETRIEVED", "SKINNED" }, 1000 * 60 * 60, _ => location.Get(), _ => "Hunting a Legendary Animal"),
             // TODO poachers
-            // free roam events
-            new RDR2GenericMissionDetector(new string[] { "KING OF THE CASTLE", "CAPTURE & CONTROL THE AREAS" }, new string[] { "KING OF THE CASTLE OVER" }, 1000 * 60 * 10, _ => "King of the Castle", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "COLD DEAD HANDS", "HOLD A BAG" }, new string[] { "COLD DEAD HANDS OVER" }, 1000 * 60 * 5, _ => "Cold Dead Hands", text => {
-                if (text.FuzzyContains("Pick up a bag", 0.9)) return "Competing";
-                else if (text.FuzzyContains("Take a bag from ", 0.8)) return "Attacking";
-                else if (text.FuzzyContains("Hold the bag", 0.8)) return "Defending";
-                else return null;
-            }),
-            new RDR2GenericMissionDetector(new string[] { "RAILROAD BARON", "CAPTURE AND CONTROL THE TRAIN CAR" }, new string[] { "RAILROAD BARON OVER" }, 1000 * 60 * 10, _ => "Railroad Baron", text => {
-                if (text.FuzzyContains("Gain control of the train car from ", 0.9)) return "Attacking";
-                else if (text.FuzzyContains("Gain control of the train car ", 0.8)) return "Competing";
-                else if (text.FuzzyContains("Defend the train car", 0.8) || text.FuzzyContains("Help defend the train car", 0.8)) return "Defending";
-                else return null;
-            }),
-            new RDR2GenericMissionDetector(new string[] { "FOOL'S GOLD", "GET THE GOLDEN ARMOR AND TAKE OUT PLAYERS TO EARN POINTS" }, new string[] { "FOOL'S GOLD OVER" }, 1000 * 60 * 10, _ => "Fool's Gold", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "WILDLIFE PHOTOGRAPHER", "TAKE THE BEST PHOTOGRAPHS OF ANIMALS TO EARN POINTS" }, new string[] { "WILDLIFE PHOTOGRAPHER OVER", "PLACE" }, 1000 * 60 * 10, _ => "Wildlife Photographer", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "DISPATCH RIDER", "DELIVER THE HORSE" }, new string[] { "DISPATCH RIDER OVER" }, 1000 * 60 * 10, _ => "Dispatch Rider", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "MASTER ARCHER", "SHOOT THE TARGETS" }, new string[] { "MASTER ARCHER OVER", "PLACE" }, 1000 * 60 * 10, _ => "Master Archer", _ => null),
-            // free roam events (roles)
-            new RDR2GenericMissionDetector(new string[] { "PROTECT LEGENDARY ANMIAL", "WORK TOGETHER AND RELEASE THE LEGENDARY" }, new string[] { "PROTECT LEGENDARY ANMIAL OVER" }, 1000 * 60 * 10, _ => "Protect Legendary Animal", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "DAY OF RECKONING", "CAPTURE BOUNTY TARGETS AND SCORE THE MOST POINTS" }, new string[] { "DAY OF RECKONING OVER", "PLACE" }, 1000 * 60 * 10, _ => "Day of Reckoning", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "ANIMAL TAGGING", "SEDATE AND TAG AS MANY ANIMALS AS POSSIBLE" }, new string[] { "ANIMAL TAGGING OVER", "PLACE" }, 1000 * 60 * 10, _ => "Animal Tagging", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "MAN HUNT", "WORK TOGETHER AND CAPTURE THE BOUNTY TARGETS" }, new string[] { "MAN HUNT OVER" }, 1000 * 60 * 10, _ => "Man Hunt", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "TRADE ROUTE", "WORK TOGETHER AND PROTECT THE GOODS" }, new string[] { "TRADE ROUTE OVER" }, 1000 * 60 * 15, _ => "Trade Route", _ => "Protecting the Train"),
-            new RDR2GenericMissionDetector(new string[] { "CONDOR EGG", "FIND THE CONDOR EGG WORTH" }, new string[] { "CONDOR EGG OVER" }, 1000 * 60 * 10, _ => "Condor Egg", _ => null),
-            new RDR2GenericMissionDetector(new string[] { "SALVAGE", "SEARCH THE COLLECTIBLES" }, new string[] { "SALVAGE OVER" }, 1000 * 60 * 10, _ => "Salvage", _ => null),
-            new RDR2CallToArmsDetector(),
             new RDR2FreeRoamDetector(location)
         };
 

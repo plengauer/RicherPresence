@@ -4,9 +4,7 @@
       "commandName": "Project",
       "environmentVariables": {
         "SLEEP_TIME": "0",
-        "KEEP_SCREENSHOTS": "true",
         "ASSUME_PROCESS_RUNNING": "true",
-        "CAPTURE_VIDEO_EXE": "C:\\Users\\pleng\\Downloads\\video-sdk-samples-master\\video-sdk-samples-master\\nvEncDXGIOutputDuplicationSample\\x64\\Release\\nvEncDXGIOutputDuplicationSample.exe",
         "DISCORD_RICH_PRESENCE_SIMULATE": "true",
         "FFMPEG_EXE": "C:\\Users\\pleng\\Scripts\\ffmpeg-5.0-essentials_build\\bin\\ffmpeg.exe",
         "LOG_DIR": "D:\\Windows\\Recordings\\Red Dead Redemption 2\\RichPresenceInput\\Live",

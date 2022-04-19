@@ -4,7 +4,7 @@ public class DXGIOutputDuplication : Screen
 {
     private static string TEMPORARY_DIR = Environment.GetEnvironmentVariable("TEMP_DIR") ?? ".";
 
-    private static string CAPTURE_VIDEO_EXE_PATH = Environment.GetEnvironmentVariable("CAPTURE_VIDEO_EXE") ?? ".\\DXGIOutputDuplication.exe";
+    private static string CAPTURE_VIDEO_EXE_PATH = Environment.GetEnvironmentVariable("CAPTURE_VIDEO_EXE") ?? ".\\DXGIOutputDuplication.exe";// DXGIOutputDuplication
 
     private static ActivitySource ACTIVITIES = new ActivitySource(Observability.ACTIVITY_SOURCE_NAME);
 

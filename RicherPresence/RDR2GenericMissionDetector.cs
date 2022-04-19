@@ -20,7 +20,7 @@ public class RDR2GenericMissionDetector : RDR2ActivityDetector
     public RDR2GenericMissionDetector(string[] startIndicators, string[] endIndicators, long duration, Produce details, Produce state)
     {
         this.startIndicators = startIndicators;
-        this.endIndicators = endIndicators.Concat(new string[] { "MISSION OVER", "MISSION PASSED", "MISSION FAILED", "MATCH OVER", "MATCH WON", "MATCH LOST", "VOTE LIKE", "VOTE DISLIKE", "CONTINUE", "YOUR POSSE ABANDONED THE JOB" }).ToArray();
+        this.endIndicators = endIndicators.Concat(new string[] { "MISSION OVER", "MISSION PASSED", "MISSION FAILED", "YOUR POSSE ABANDONED THE JOB" }).ToArray();
         this.duration = duration;
         this.detailsProducer = details;
         this.stateProducer = state;
