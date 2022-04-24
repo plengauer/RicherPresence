@@ -2,8 +2,8 @@
 
 public class DXGIOutputDuplication : Screen
 {
-    private static string TEMPORARY_DIR = Environment.GetEnvironmentVariable("TEMP_DIR") ?? ".";
 
+    private static string TEMPORARY_DIR = Environment.GetEnvironmentVariable("TEMP_DIR") ?? ".";
     private static string CAPTURE_VIDEO_EXE_PATH = Environment.GetEnvironmentVariable("CAPTURE_VIDEO_EXE") ?? ".\\DXGIOutputDuplication.exe";// DXGIOutputDuplication
 
     private static ActivitySource ACTIVITIES = new ActivitySource(Observability.ACTIVITY_SOURCE_NAME);
@@ -18,14 +18,14 @@ public class DXGIOutputDuplication : Screen
         return false;
     }
 
-    public string Capture()
+    public string Capture(long id)
     {
-        string result = TEMPORARY_DIR + "\\screenshot_" + (index++) + ".bmp";
-        File.Delete(result);
+        string filename = TEMPORARY_DIR + "\\screenshot_" + id + ".bmp";
+        File.Delete(filename);
         ProcessStartInfo infoCaptureVideo = new ProcessStartInfo()
         {
             FileName = CAPTURE_VIDEO_EXE_PATH,
-            Arguments = "",
+            Arguments = "\"" + filename + "\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -43,8 +43,7 @@ public class DXGIOutputDuplication : Screen
                 process?.WaitForExit();
             }
         }
-        File.Move("DDATest_0.bmp", result);
-        return result;
+        return filename;
     }
 }
 

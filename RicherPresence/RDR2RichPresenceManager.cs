@@ -21,18 +21,23 @@ public class RDR2RichPresenceManager : RichPresenceManager
     private bool waitOnOverflow;
     private bool deleteCaptures;
 
+    private long nextID;
+    ActivityContext? nextContext;
+    private object monitor;
     private ConcurrentQueue<Item> queueCaptures = new ConcurrentQueue<Item>();
     private ConcurrentQueue<Item> queueOCRs = new ConcurrentQueue<Item>();
     private ConcurrentQueue<Item> queueActivities = new ConcurrentQueue<Item>();
 
     private struct Item
     {
+        public long Id;
         public ActivityContext? context;
         public string? screenshot;
         public string? text;
         public Discord.Activity? activity;
     }
 
+    private Thread? threadTrigger;
     private Thread? threadCapture;
     private Thread? threadOCR;
     private Thread? threadParse;
@@ -57,11 +62,14 @@ public class RDR2RichPresenceManager : RichPresenceManager
         this.waitOnOverflow = waitOnOverflow;
         this.deleteCaptures = deleteCaptures;
 
+        nextID = 0;
+        nextContext = new ActivityContext();
+        monitor = new object();
         queueCaptures = new ConcurrentQueue<Item>();
         queueOCRs = new ConcurrentQueue<Item>();
         queueActivities = new ConcurrentQueue<Item>();
 
-        threadCapture = threadOCR = threadParse = threadUpdate = null;
+        threadTrigger = threadCapture = threadOCR = threadParse = threadUpdate = null;
         active = false;
 
         activities = new ActivitySource(Observability.ACTIVITY_SOURCE_NAME);
@@ -181,11 +189,16 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     protected override void Start(IRichPresence presence)
     {
+        
+        threadTrigger = new Thread(() => RunTrigger());
         threadCapture = new Thread(() => RunCapture());
         threadOCR = new Thread(() => RunOCR());
         threadParse = new Thread(() => RunParse());
         threadUpdate = new Thread(() => RunUpdate(presence));
+        nextID = 0;
+        nextContext = new ActivityContext();
         active = true;
+        threadTrigger.Start();
         threadCapture.Start();
         threadOCR.Start();
         threadParse.Start();
@@ -194,7 +207,12 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     protected override void Stop(IRichPresence presence)
     {
-        active = false;
+        lock (monitor)
+        {
+            active = false;
+            Monitor.PulseAll(monitor);
+        }
+        threadTrigger?.Join();
         threadCapture?.Join();
         threadOCR?.Join();
         threadParse?.Join();
@@ -227,20 +245,49 @@ public class RDR2RichPresenceManager : RichPresenceManager
         }
     }
 
-    private void RunCapture()
+    private void RunTrigger()
     {
-        int time = Environment.TickCount;
+        long time = Environment.TickCount64;
         while (active)
         {
-            int duration = (Environment.TickCount - time);
+            int duration = (int) (Environment.TickCount64 - time);
             Thread.Sleep(Math.Max(1, Math.Min(sleepTime, sleepTime - duration)));
             using var root = activities.StartActivity("discord.rich_presence.rdr2", ActivityKind.Server);
-            time = Environment.TickCount;
-            using var span = activities.StartActivity("discord.rich_presence.rdr2.capture_screen");
+            time = Environment.TickCount64;
+            lock (monitor)
+            {
+                nextContext = root?.Context;
+                Monitor.Pulse(monitor);
+            }
+        }
+    }
+
+    private void RunCapture()
+    {
+        for (;;)
+        {
+            long myID;
+            ActivityContext? myContext;
+            lock (monitor)
+            {
+                for (;;)
+                {
+                    long myNextID = nextID;
+                    if (!active) return;
+                    Monitor.Wait(monitor);
+                    if (!active) return;
+                    else if (myNextID == nextID) break;
+                    else continue;
+                }
+                myID = nextID++;
+                myContext = nextContext;
+            }
+
+            using var span = activities.StartActivity("discord.rich_presence.rdr2.capture_screen", ActivityKind.Internal, myContext ?? new ActivityContext());
             if (screen.IsDone()) return;
-            string screenshot = screen.Capture();
+            string screenshot = screen.Capture(myID);
             if (screenshot == null) continue;
-            if (!Enqueue(queueCaptures, new Item { screenshot = screenshot, context = root?.Context })) File.Delete(screenshot);
+            if (!Enqueue(queueCaptures, new Item { Id = myID, screenshot = screenshot, context = myContext })) File.Delete(screenshot);
         }
     }
 
@@ -280,6 +327,8 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     private void RunParse()
     {
+        Dictionary<long, Item> outOfOrderStorage = new Dictionary<long, Item>();
+        long lastID = -1;
         Discord.Activity activity = RDR2ActivityFactory.Create(null, null);
         while ((threadOCR != null && threadOCR.IsAlive) || queueOCRs.Count > 0)
         {

@@ -15,7 +15,7 @@ public class ScreenSimulator : Screen
         this.index = 0;
     }
 
-    public string Capture()
+    public string Capture(long id)
     {
         lock (this)
         {

@@ -15,6 +15,7 @@ public class Tesseract : OCR
     {
         using var s = ACTIVITIES.StartActivity("tesseract", ActivityKind.Client);
         List<string?> output = new List<string?>();
+        List<string?> log = new List<string?>();
         ProcessStartInfo info = new ProcessStartInfo()
         {
             FileName = PATH,
@@ -27,13 +28,14 @@ public class Tesseract : OCR
         using (Process? process = Process.Start(info))
         {
             process.OutputDataReceived += (sender, args) => output.Add(args.Data);
-            process.ErrorDataReceived += (sender, args) => { /* ignore */ };
+            process.ErrorDataReceived += (sender, args) => log.Add(args.Data);
             process?.BeginOutputReadLine();
             process?.BeginErrorReadLine();
             process?.WaitForExit();
         }
         string str = string.Join('\n', output.ToArray());
         s?.AddTag("tesseract.result", str);
+        s?.AddTag("tesseract.log", string.Join('\n', log.ToArray()));
         return str;
     }
 }
