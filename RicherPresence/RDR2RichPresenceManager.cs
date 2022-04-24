@@ -13,20 +13,20 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     private const long CLIENT_ID = 947170931015565323;
     private const uint STEAM_APPLICATION_ID = 1174180;
-    private const uint MAX_QUEUE_LENGTH = 60 * 5;
+    private const int MAX_QUEUE_LENGTH = 60 * 5;
 
     private Screen screen;
     private OCR ocr;
     private int sleepTime;
-    private bool waitOnOverflow;
+    private bool blockWhenFull;
     private bool deleteCaptures;
 
     private long nextID;
     ActivityContext? nextContext;
     private object monitor;
-    private ConcurrentQueue<Item> queueCaptures = new ConcurrentQueue<Item>();
-    private ConcurrentQueue<Item> queueOCRs = new ConcurrentQueue<Item>();
-    private ConcurrentQueue<Item> queueActivities = new ConcurrentQueue<Item>();
+    private BlockingQueue<Item> queueCaptures;
+    private BlockingQueue<Item> queueOCRs;
+    private BlockingQueue<Item> queueActivities;
 
     private struct Item
     {
@@ -42,7 +42,6 @@ public class RDR2RichPresenceManager : RichPresenceManager
     private Thread? threadOCR;
     private Thread? threadParse;
     private Thread? threadUpdate;
-    private volatile bool active;
 
     private ActivitySource activities;
     private Meter meter;
@@ -54,23 +53,22 @@ public class RDR2RichPresenceManager : RichPresenceManager
     //TODO make some detector base classes, like for showdowns, with lobby screen, and so on
     // for example we can check lobby screen, and if that is gone for several seconds, lets assume it started
     // also, try to parse the timer
-    public RDR2RichPresenceManager(Screen screen, OCR ocr, int sleepTime, bool waitOnOverflow = true, bool deleteCaptures = true) : base("RDR2")
+    public RDR2RichPresenceManager(Screen screen, OCR ocr, int sleepTime, bool blockWhenFull = false, bool deleteCaptures = true) : base("RDR2")
     {
         this.screen = screen;
         this.ocr = ocr;
         this.sleepTime = sleepTime;
-        this.waitOnOverflow = waitOnOverflow;
+        this.blockWhenFull = blockWhenFull;
         this.deleteCaptures = deleteCaptures;
 
         nextID = 0;
         nextContext = new ActivityContext();
         monitor = new object();
-        queueCaptures = new ConcurrentQueue<Item>();
-        queueOCRs = new ConcurrentQueue<Item>();
-        queueActivities = new ConcurrentQueue<Item>();
+        queueCaptures = new BlockingQueue<Item>(MAX_QUEUE_LENGTH);
+        queueOCRs = new BlockingQueue<Item>(MAX_QUEUE_LENGTH);
+        queueActivities = new BlockingQueue<Item>(MAX_QUEUE_LENGTH);
 
         threadTrigger = threadCapture = threadOCR = threadParse = threadUpdate = null;
-        active = false;
 
         activities = new ActivitySource(Observability.ACTIVITY_SOURCE_NAME);
         meter = new Meter(Observability.METER_SOURCE_NAME, "1.0.0");
@@ -197,7 +195,6 @@ public class RDR2RichPresenceManager : RichPresenceManager
         threadUpdate = new Thread(() => RunUpdate(presence));
         nextID = 0;
         nextContext = new ActivityContext();
-        active = true;
         threadTrigger.Start();
         threadCapture.Start();
         threadOCR.Start();
@@ -207,15 +204,15 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     protected override void Stop(IRichPresence presence)
     {
-        lock (monitor)
-        {
-            active = false;
-            Monitor.PulseAll(monitor);
-        }
+        threadTrigger?.Interrupt();
         threadTrigger?.Join();
+        threadCapture?.Interrupt();
         threadCapture?.Join();
+        threadOCR?.Interrupt();
         threadOCR?.Join();
+        threadParse?.Interrupt();
         threadParse?.Join();
+        threadUpdate?.Interrupt();
         threadUpdate?.Join();
         queueCaptures.Clear();
         queueOCRs.Clear();
@@ -226,38 +223,26 @@ public class RDR2RichPresenceManager : RichPresenceManager
         threadUpdate = null;
     }
 
-    private bool Enqueue(ConcurrentQueue<Item> queue, Item item)
-    {
-        if (waitOnOverflow)
-        {
-            while (queue.Count >= MAX_QUEUE_LENGTH) Thread.Sleep(Math.Max(1, sleepTime / 100));
-            queue.Enqueue(item);
-            return true;
-        }
-        else if (queue.Count < MAX_QUEUE_LENGTH)
-        {
-            queue.Enqueue(item);
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
     private void RunTrigger()
     {
         long time = Environment.TickCount64;
-        while (active)
+        for (;;)
         {
             int duration = (int) (Environment.TickCount64 - time);
-            Thread.Sleep(Math.Max(1, Math.Min(sleepTime, sleepTime - duration)));
+            try
+            {
+                Thread.Sleep(Math.Max(1, Math.Min(sleepTime, sleepTime - duration)));
+            }
+            catch (ThreadInterruptedException)
+            {
+                break;
+            }
             using var root = activities.StartActivity("discord.rich_presence.rdr2", ActivityKind.Server);
             time = Environment.TickCount64;
             lock (monitor)
             {
                 nextContext = root?.Context;
-                Monitor.Pulse(monitor);
+                Monitor.Pulse(monitor); // in theory can wake all, but only one is necessary
             }
         }
     }
@@ -272,22 +257,34 @@ public class RDR2RichPresenceManager : RichPresenceManager
             {
                 for (;;)
                 {
+                    // wait for a pulse, race for the ID, and if win, continue, if not, wait for the next pulse
                     long myNextID = nextID;
-                    if (!active) return;
+                    if (threadTrigger == null || !threadTrigger.IsAlive) return;
                     Monitor.Wait(monitor);
-                    if (!active) return;
+                    if (threadTrigger == null || !threadTrigger.IsAlive) return;
                     else if (myNextID == nextID) break;
                     else continue;
                 }
                 myID = nextID++;
                 myContext = nextContext;
             }
+            if (screen.IsDone()) return;
 
             using var span = activities.StartActivity("discord.rich_presence.rdr2.capture_screen", ActivityKind.Internal, myContext ?? new ActivityContext());
-            if (screen.IsDone()) return;
-            string screenshot = screen.Capture(myID);
-            if (screenshot == null) continue;
-            if (!Enqueue(queueCaptures, new Item { Id = myID, screenshot = screenshot, context = myContext })) File.Delete(screenshot);
+            try
+            {
+                string screenshot = screen.Capture(myID);
+                if (screenshot == null) continue;
+                if (!queueCaptures.Enqueue(new Item { Id = myID, screenshot = screenshot, context = myContext }, blockWhenFull)) File.Delete(screenshot);
+            }
+            catch (Exception exception)
+            {
+                var tags = new ActivityTagsCollection();
+                tags.Add("exception.type", exception.GetType().Name);
+                tags.Add("exception.message", exception.Message);
+                tags.Add("exception.stacktrace", exception.ToString());
+                span?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+            }
         }
     }
 
@@ -295,15 +292,16 @@ public class RDR2RichPresenceManager : RichPresenceManager
     {
         while ((threadCapture != null && threadCapture.IsAlive) || queueCaptures.Count > 0)
         {
-            Item item;
-            if (queueCaptures.TryDequeue(out item) && item.screenshot != null)
+            try
             {
+                Item item = queueCaptures.Dequeue();
+                if (item.screenshot == null) continue;
                 using var span = activities.StartActivity("discord.rich_presence.rdr2.ocr", ActivityKind.Internal, item.context ?? new ActivityContext());
                 try
                 {
                     item.text = ocr.Parse(item.screenshot);
                     if (item.text == null) continue;
-                    Enqueue(queueOCRs, item);
+                    queueOCRs.Enqueue(item, blockWhenFull);
                 }
                 catch (Exception exception)
                 {
@@ -318,29 +316,30 @@ public class RDR2RichPresenceManager : RichPresenceManager
                     if (deleteCaptures) File.Delete(item.screenshot);
                 }
             }
-            else
+            catch (ThreadInterruptedException)
             {
-                Thread.Sleep(sleepTime);
+                break;
             }
         }
     }
 
     private void RunParse()
     {
-        Dictionary<long, Item> outOfOrderStorage = new Dictionary<long, Item>();
-        long lastID = -1;
+        //Dictionary<long, Item> outOfOrderStorage = new Dictionary<long, Item>();
+        //long lastID = -1;
         Discord.Activity activity = RDR2ActivityFactory.Create(null, null);
         while ((threadOCR != null && threadOCR.IsAlive) || queueOCRs.Count > 0)
         {
-            Item item;
-            if (queueOCRs.TryDequeue(out item) && item.text != null)
+            try
             {
+                Item item = queueOCRs.Dequeue();
+                if (item.text == null) continue;
                 using var span = activities.StartActivity("discord.rich_presence.rdr2.parse", ActivityKind.Internal, item.context ?? new ActivityContext());
                 try
                 {
                     item.activity = ParseActivity(item.text);
                     if (!item.activity.HasValue || Equals(item.activity.Value, activity)) continue;
-                    Enqueue(queueActivities, item);
+                    queueActivities.Enqueue(item, blockWhenFull);
                     activity = item.activity.Value;
                 }
                 catch (Exception exception)
@@ -352,9 +351,9 @@ public class RDR2RichPresenceManager : RichPresenceManager
                     span?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
                 }
             }
-            else
+            catch (ThreadInterruptedException)
             {
-                Thread.Sleep(sleepTime);
+                break;
             }
         }
     }
@@ -364,9 +363,10 @@ public class RDR2RichPresenceManager : RichPresenceManager
         presence.Update(RDR2ActivityFactory.Create(null, null));
         while ((threadParse != null && threadParse.IsAlive) || queueActivities.Count > 0)
         {
-            Item item;
-            if (queueActivities.TryDequeue(out item) && item.activity != null)
+            try
             {
+                Item item = queueActivities.Dequeue();
+                if (item.activity == null) continue;
                 using var span = activities.StartActivity("discord.rich_presence.rdr2.update", ActivityKind.Internal, item.context ?? new ActivityContext());
                 try
                 {
@@ -381,11 +381,12 @@ public class RDR2RichPresenceManager : RichPresenceManager
                     span?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
                 }
             }
-            else
+            catch (ThreadInterruptedException)
             {
-                Thread.Sleep(sleepTime);
+                break;
             }
         }
+        presence.Clear();
     }
 
     private static bool Equals(Discord.Activity a1, Discord.Activity a2)
