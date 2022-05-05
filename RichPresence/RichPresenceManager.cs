@@ -11,6 +11,9 @@ public abstract class RichPresenceManager : IDisposable
     private string processName;
 
     private Thread thread;
+    private bool running;
+
+    private object monitor;
     private bool active;
 
     public RichPresenceManager(string processName)
@@ -18,9 +21,20 @@ public abstract class RichPresenceManager : IDisposable
         this.processName = processName;
 
         thread = new Thread(() => Run());
-        active = true;
+        running = true;
+
+        monitor = new object();
+        active = false;
 
         thread.Start();
+    }
+
+    public bool IsActive()
+    {
+        lock (monitor)
+        {
+            return active;
+        }
     }
 
     private void Run()
@@ -28,13 +42,13 @@ public abstract class RichPresenceManager : IDisposable
         Thread.Sleep(1000 * 5); // this thread is started in the ctor, but makes virtual calls. waiting is a hacky workaround in this case ...
         while (true)
         {
-            while(active && !IsProcessRunning()) WaitForProcessChange();
-            if (!active) return;
+            while(running && !IsProcessRunning()) WaitForProcessChange();
+            if (!running) return;
             using (IRichPresence presence = CreateRichPresence())
             {
                 presence.Update(new Discord.Activity());
                 Start(presence);
-                while (active && IsProcessRunning()) WaitForProcessChange();
+                while (running && IsProcessRunning()) WaitForProcessChange();
                 Stop(presence);
             }
         }
@@ -59,13 +73,37 @@ public abstract class RichPresenceManager : IDisposable
         return false;
     }
 
-    protected virtual void Start(IRichPresence presence) { }
+    protected virtual void Start(IRichPresence presence) {
+        lock (monitor)
+        {
+            active = true;
+            Monitor.PulseAll(monitor);
+        }
+    }
 
-    protected virtual void Stop(IRichPresence presence) { }
+    protected virtual void Stop(IRichPresence presence) {
+        lock (monitor)
+        {
+            active = false;
+            Monitor.PulseAll(monitor);
+        }
+    }
+
+    public void Dispose(bool force)
+    {
+        if (!force)
+        {
+            lock (monitor)
+            {
+                while (active) Monitor.Wait(monitor);
+            }
+        }
+        running = false;
+        thread.Join();
+    }
 
     public virtual void Dispose()
     {
-        active = false;
-        thread.Join();
+        Dispose(true);
     }
 }

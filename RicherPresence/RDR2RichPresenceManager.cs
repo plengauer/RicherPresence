@@ -25,8 +25,8 @@ public class RDR2RichPresenceManager : RichPresenceManager
     ActivityContext? nextContext;
     private object monitor;
     private BlockingQueue<Item> queueCaptures;
-    private BlockingQueue<Item> queueOCRs;
-    private BlockingQueue<Item> queueActivities;
+    private BlockingRevisionedQueue<Item> queueOCRs;
+    private BlockingRevisionedQueue<Item> queueActivities;
 
     private struct Item
     {
@@ -38,8 +38,8 @@ public class RDR2RichPresenceManager : RichPresenceManager
     }
 
     private Thread? threadTrigger;
-    private Thread? threadCapture;
-    private Thread? threadOCR;
+    private List<Thread?>? threadsCapture;
+    private List<Thread?>? threadsOCR;
     private Thread? threadParse;
     private Thread? threadUpdate;
 
@@ -65,10 +65,11 @@ public class RDR2RichPresenceManager : RichPresenceManager
         nextContext = new ActivityContext();
         monitor = new object();
         queueCaptures = new BlockingQueue<Item>(MAX_QUEUE_LENGTH);
-        queueOCRs = new BlockingQueue<Item>(MAX_QUEUE_LENGTH);
-        queueActivities = new BlockingQueue<Item>(MAX_QUEUE_LENGTH);
+        queueOCRs = new BlockingRevisionedQueue<Item>(MAX_QUEUE_LENGTH, item => item.Id, 1000 * 60, nextID);
+        queueActivities = new BlockingRevisionedQueue<Item>(MAX_QUEUE_LENGTH, item => item.Id, 1000 * 10, nextID);
 
-        threadTrigger = threadCapture = threadOCR = threadParse = threadUpdate = null;
+        threadTrigger = threadParse = threadUpdate = null;
+        threadsOCR = threadsCapture = null;
 
         activities = new ActivitySource(Observability.ACTIVITY_SOURCE_NAME);
         meter = new Meter(Observability.METER_SOURCE_NAME, "1.0.0");
@@ -188,16 +189,23 @@ public class RDR2RichPresenceManager : RichPresenceManager
     protected override void Start(IRichPresence presence)
     {
         
-        threadTrigger = new Thread(() => RunTrigger());
-        threadCapture = new Thread(() => RunCapture());
-        threadOCR = new Thread(() => RunOCR());
-        threadParse = new Thread(() => RunParse());
-        threadUpdate = new Thread(() => RunUpdate(presence));
+        threadTrigger = new Thread(() => RunTrigger()) { Name = GetType().Name + " Trigger" };
+        threadsCapture = new List<Thread?>();
+        for (int i = 0; i < 1 /* 60 * 2 */; i++) threadsCapture.Add(new Thread(() => RunCapture()) { Name = GetType().Name + " Capture " + i });
+        threadsOCR = new List<Thread?>();
+        for (int i = 0; i < 1 /* Environment.ProcessorCount */; i++) threadsOCR.Add(new Thread(() => RunOCR()) { Name = GetType().Name + " OCR " + i });
+        threadParse = new Thread(() => RunParse()) { Name = GetType().Name + " Parse" };
+        threadUpdate = new Thread(() => RunUpdate(presence)) { Name = GetType().Name + " Update" };
+
         nextID = 0;
         nextContext = new ActivityContext();
+        queueCaptures.Clear();
+        queueOCRs.Reset(nextID);
+        queueActivities.Reset(nextID);
+
         threadTrigger.Start();
-        threadCapture.Start();
-        threadOCR.Start();
+        threadsCapture.ForEach(t => t?.Start());
+        threadsOCR.ForEach(t => t?.Start());
         threadParse.Start();
         threadUpdate.Start();
     }
@@ -206,19 +214,21 @@ public class RDR2RichPresenceManager : RichPresenceManager
     {
         threadTrigger?.Interrupt();
         threadTrigger?.Join();
-        threadCapture?.Interrupt();
-        threadCapture?.Join();
-        threadOCR?.Interrupt();
-        threadOCR?.Join();
+        threadsCapture?.ForEach(t => t?.Interrupt());
+        threadsCapture?.ForEach(t => t?.Join());
+        threadsOCR?.ForEach(t => t?.Interrupt());
+        threadsOCR?.ForEach(t => t?.Join());
         threadParse?.Interrupt();
         threadParse?.Join();
         threadUpdate?.Interrupt();
         threadUpdate?.Join();
+
         queueCaptures.Clear();
         queueOCRs.Clear();
         queueActivities.Clear();
-        threadCapture = null;
-        threadOCR = null;
+
+        threadsCapture = null;
+        threadsOCR = null;
         threadParse = null;
         threadUpdate = null;
     }
@@ -259,16 +269,20 @@ public class RDR2RichPresenceManager : RichPresenceManager
                 {
                     // wait for a pulse, race for the ID, and if win, continue, if not, wait for the next pulse
                     long myNextID = nextID;
-                    if (threadTrigger == null || !threadTrigger.IsAlive) return;
-                    Monitor.Wait(monitor);
-                    if (threadTrigger == null || !threadTrigger.IsAlive) return;
-                    else if (myNextID == nextID) break;
+                    try
+                    {
+                        Monitor.Wait(monitor);
+                    }
+                    catch (ThreadInterruptedException)
+                    {
+                        return;
+                    }
+                    if (myNextID == nextID) break;
                     else continue;
                 }
                 myID = nextID++;
                 myContext = nextContext;
             }
-            if (screen.IsDone()) return;
 
             using var span = activities.StartActivity("discord.rich_presence.rdr2.capture_screen", ActivityKind.Internal, myContext ?? new ActivityContext());
             try
@@ -290,7 +304,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     private void RunOCR()
     {
-        while ((threadCapture != null && threadCapture.IsAlive) || queueCaptures.Count > 0)
+        while ((threadsCapture != null && threadsCapture.Any(t => t != null && t.IsAlive)) || queueCaptures.Count > 0)
         {
             try
             {
@@ -325,10 +339,8 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     private void RunParse()
     {
-        //Dictionary<long, Item> outOfOrderStorage = new Dictionary<long, Item>();
-        //long lastID = -1;
         Discord.Activity activity = RDR2ActivityFactory.Create(null, null);
-        while ((threadOCR != null && threadOCR.IsAlive) || queueOCRs.Count > 0)
+        while ((threadsOCR != null && threadsOCR.Any(t => t != null && t.IsAlive)) || queueOCRs.Count > 0)
         {
             try
             {

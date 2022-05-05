@@ -27,6 +27,34 @@ public class BlockingRevisionedQueue<T>
         this.dequeuer = false;
     }
 
+    public void Reset(long firstRevision)
+    {
+        lock (monitor) {
+            Clear();
+            nextRevision = firstRevision;
+        }
+    }
+
+    public int Count
+    {
+        get
+        {
+            lock (monitor)
+            {
+                return queue.Count;
+            }
+        }
+    }
+
+    public void Clear()
+    {
+        lock (monitor)
+        {
+            queue.Clear();
+            Monitor.PulseAll(monitor);
+        }
+    }
+
     public bool Enqueue(T item, bool blockWhenFull)
     {
         lock (monitor)
@@ -54,8 +82,9 @@ public class BlockingRevisionedQueue<T>
                 long end = Environment.TickCount64 + revisionTimeout;
                 while (!queue.ContainsKey(nextRevision) && Environment.TickCount64 < end) Monitor.Wait(monitor, Math.Max(1, (int) (end - Environment.TickCount64)));
                 while (!queue.ContainsKey(nextRevision)) nextRevision++;
-                T item = queue[nextRevision++];
+                T item = queue[nextRevision];
                 queue.Remove(nextRevision);
+                nextRevision++;
                 return item;
             }
             finally

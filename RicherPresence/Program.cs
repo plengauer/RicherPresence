@@ -22,6 +22,8 @@ foreach (string name in new string[] { "dt_metadata_e617c525669e072eebe3d0f08212
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
+string token = Environment.GetEnvironmentVariable("DISCORD_RICHER_PRESENCE_DYNATRACE_API_TOKEN") ?? "<no token>";
+
 Sdk.CreateTracerProviderBuilder()
     .SetSampler(new AlwaysOnSampler())
     .AddSource(Observability.ACTIVITY_SOURCE_NAME)
@@ -30,7 +32,7 @@ Sdk.CreateTracerProviderBuilder()
     {
         options.Endpoint = new Uri("https://ldj78075.sprint.dynatracelabs.com/api/v2/otlp/v1/traces");
         options.Protocol = OtlpExportProtocol.HttpProtobuf;
-        options.Headers = "Authorization=Api-Token dt0c01.JPEOKTVXI5MHU7SWQ3RU6P4O.IQBVZILPY5A4M2QEJC5AX2JQ4GOWL3PWKBU4N7W4NT6WKR4HKTSD64W3CNLQLXHV";
+        options.Headers = "Authorization=Api-Token " + token;
         options.ExportProcessorType = ExportProcessorType.Batch;
     })
     .Build();
@@ -41,18 +43,27 @@ Sdk.CreateMeterProviderBuilder()
     .AddDynatraceExporter(cfg =>
     {
         cfg.Url = "https://ldj78075.sprint.dynatracelabs.com/api/v2/metrics/ingest";
-        cfg.ApiToken = "dt0c01.TFMGCJDV6345JGVKAM5DSUQT.7N4DX4NFSTS2LRGTCWGZRFUEC6ZFPS23QKD4IW7HX4OIMHW64X53K5JYRGMDE437";
+        cfg.ApiToken = token;
         cfg.DefaultDimensions = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("service.name", "Discord Richer Presence") };
     })
     .Build();
 
-Screen screen = new DXGIOutputDuplication();
-OCR ocr = new Tesseract();
+bool[] running = new bool[] { true };
 
-using (RDR2RichPresenceManager presence = new RDR2RichPresenceManager(screen, ocr, 1000))
+using (Updater updater = new Updater("https://github.com/plengauer/RicherPresence", () =>
 {
-    while(true)
+    lock (running)
     {
-        Thread.Sleep(1000 * 60);
+        running[0] = false;
+        Monitor.PulseAll(running);
+    }
+}))
+{
+    Screen screen = new DXGIOutputDuplication();
+    OCR ocr = new Tesseract();
+    using RDR2RichPresenceManager presence = new RDR2RichPresenceManager(screen, ocr, 1000);
+    lock (running)
+    {
+        while (running[0]) Monitor.Wait(running);
     }
 }
