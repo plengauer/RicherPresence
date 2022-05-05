@@ -63,4 +63,12 @@ public class BlockingQueue<T>
         }
     }
 
+    public void WaitForEmpty()
+    {
+        lock (monitor)
+        {
+            while (Count > 0) Monitor.Wait(monitor);
+        }
+    }
+
 }

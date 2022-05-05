@@ -188,12 +188,13 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     protected override void Start(IRichPresence presence)
     {
+        base.Start(presence);
         
         threadTrigger = new Thread(() => RunTrigger()) { Name = GetType().Name + " Trigger" };
         threadsCapture = new List<Thread?>();
-        for (int i = 0; i < 1 /* 60 * 2 */; i++) threadsCapture.Add(new Thread(() => RunCapture()) { Name = GetType().Name + " Capture " + i });
+        for (int i = 0; i < 60 * 2; i++) threadsCapture.Add(new Thread(() => RunCapture()) { Name = GetType().Name + " Capture " + i });
         threadsOCR = new List<Thread?>();
-        for (int i = 0; i < 1 /* Environment.ProcessorCount */; i++) threadsOCR.Add(new Thread(() => RunOCR()) { Name = GetType().Name + " OCR " + i });
+        for (int i = 0; i < Environment.ProcessorCount; i++) threadsOCR.Add(new Thread(() => RunOCR()) { Name = GetType().Name + " OCR " + i });
         threadParse = new Thread(() => RunParse()) { Name = GetType().Name + " Parse" };
         threadUpdate = new Thread(() => RunUpdate(presence)) { Name = GetType().Name + " Update" };
 
@@ -216,10 +217,13 @@ public class RDR2RichPresenceManager : RichPresenceManager
         threadTrigger?.Join();
         threadsCapture?.ForEach(t => t?.Interrupt());
         threadsCapture?.ForEach(t => t?.Join());
+        queueCaptures.WaitForEmpty();
         threadsOCR?.ForEach(t => t?.Interrupt());
         threadsOCR?.ForEach(t => t?.Join());
+        queueOCRs.WaitForEmpty();
         threadParse?.Interrupt();
         threadParse?.Join();
+        queueActivities.WaitForEmpty();
         threadUpdate?.Interrupt();
         threadUpdate?.Join();
 
@@ -231,6 +235,8 @@ public class RDR2RichPresenceManager : RichPresenceManager
         threadsOCR = null;
         threadParse = null;
         threadUpdate = null;
+
+        base.Stop(presence);
     }
 
     private void RunTrigger()
@@ -287,7 +293,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
             using var span = activities.StartActivity("discord.rich_presence.rdr2.capture_screen", ActivityKind.Internal, myContext ?? new ActivityContext());
             try
             {
-                string screenshot = screen.Capture(myID);
+                string? screenshot = screen.Capture(myID);
                 if (screenshot == null) continue;
                 if (!queueCaptures.Enqueue(new Item { Id = myID, screenshot = screenshot, context = myContext }, blockWhenFull)) File.Delete(screenshot);
             }
@@ -304,7 +310,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     private void RunOCR()
     {
-        while ((threadsCapture != null && threadsCapture.Any(t => t != null && t.IsAlive)) || queueCaptures.Count > 0)
+        for (;;)
         {
             try
             {
@@ -340,7 +346,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
     private void RunParse()
     {
         Discord.Activity activity = RDR2ActivityFactory.Create(null, null);
-        while ((threadsOCR != null && threadsOCR.Any(t => t != null && t.IsAlive)) || queueOCRs.Count > 0)
+        for (;;)
         {
             try
             {
@@ -373,7 +379,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
     private void RunUpdate(IRichPresence presence)
     {
         presence.Update(RDR2ActivityFactory.Create(null, null));
-        while ((threadParse != null && threadParse.IsAlive) || queueActivities.Count > 0)
+        for (;;)
         {
             try
             {

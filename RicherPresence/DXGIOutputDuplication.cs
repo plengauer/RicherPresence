@@ -18,7 +18,7 @@ public class DXGIOutputDuplication : Screen
         return false;
     }
 
-    public string Capture(long id)
+    public string? Capture(long id)
     {
         string filename = TEMPORARY_DIR + "\\screenshot_" + id + ".bmp";
         File.Delete(filename);

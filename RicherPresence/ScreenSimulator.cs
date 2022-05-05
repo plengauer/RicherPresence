@@ -11,21 +11,17 @@ public class ScreenSimulator : Screen
 
     public ScreenSimulator(string directory)
     {
-        this.files = Directory.GetFiles(directory);
+        this.files = Directory.GetFiles(directory).AsEnumerable().Where(file => file.EndsWith(".bmp") || file.EndsWith(".png")).ToArray();
         this.index = 0;
+        Array.Sort(files);
     }
 
-    public string Capture(long id)
+    public string? Capture(long id)
     {
         lock (this)
         {
             Monitor.PulseAll(this);
-            while (index < files.Length)
-            {
-                string file = files[index++];
-                if (file.EndsWith(".png") || file.EndsWith(".bmp")) return file;
-            }
-            return null;
+            return index < files.Length ? files[index++] : null;
         }
     }
 

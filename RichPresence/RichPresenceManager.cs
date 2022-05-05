@@ -20,7 +20,7 @@ public abstract class RichPresenceManager : IDisposable
     {
         this.processName = processName;
 
-        thread = new Thread(() => Run());
+        thread = new Thread(() => Run()) { Name = "Rich Presence Manager" };
         running = true;
 
         monitor = new object();
