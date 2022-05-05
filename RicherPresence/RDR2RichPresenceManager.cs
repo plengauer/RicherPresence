@@ -22,7 +22,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
     private bool deleteCaptures;
 
     private long nextID;
-    ActivityContext? nextContext;
+    private ActivityContext? nextContext;
     private object monitor;
     private BlockingQueue<Item> queueCaptures;
     private BlockingRevisionedQueue<Item> queueOCRs;
@@ -213,19 +213,16 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     protected override void Stop(IRichPresence presence)
     {
-        threadTrigger?.Interrupt();
-        threadTrigger?.Join();
-        threadsCapture?.ForEach(t => t?.Interrupt());
-        threadsCapture?.ForEach(t => t?.Join());
+        //these stop calls are necessary ebcause for some reason interrupt calls to not throw exceptions
+        //working theory is that the external exeuction of processes dont set the thread state properly when interrupt is called
+        StopThread(threadTrigger);
+        threadsCapture?.ForEach(StopThread);
         queueCaptures.WaitForEmpty();
-        threadsOCR?.ForEach(t => t?.Interrupt());
-        threadsOCR?.ForEach(t => t?.Join());
+        threadsOCR?.ForEach(StopThread);
         queueOCRs.WaitForEmpty();
-        threadParse?.Interrupt();
-        threadParse?.Join();
+        StopThread(threadParse);
         queueActivities.WaitForEmpty();
-        threadUpdate?.Interrupt();
-        threadUpdate?.Join();
+        StopThread(threadUpdate);
 
         queueCaptures.Clear();
         queueOCRs.Clear();
@@ -237,6 +234,15 @@ public class RDR2RichPresenceManager : RichPresenceManager
         threadUpdate = null;
 
         base.Stop(presence);
+    }
+
+    private static void StopThread(Thread? thread)
+    {
+        if (thread == null) return;
+        do
+        {
+            thread.Interrupt();
+        } while (!thread.Join(1000));
     }
 
     private void RunTrigger()
@@ -253,12 +259,12 @@ public class RDR2RichPresenceManager : RichPresenceManager
             {
                 break;
             }
-            using var root = activities.StartActivity("discord.rich_presence.rdr2", ActivityKind.Server);
             time = Environment.TickCount64;
+            using var root = activities.StartActivity("discord.rich_presence.rdr2", ActivityKind.Server);
             lock (monitor)
             {
                 nextContext = root?.Context;
-                Monitor.Pulse(monitor); // in theory can wake all, but only one is necessary
+                Monitor.PulseAll(monitor); // in theory can wake all, but only one is necessary
             }
         }
     }
