@@ -24,7 +24,7 @@ public class Updater : IDisposable
         active = true;
         http = new HttpClient();
 
-        if (Environment.GetEnvironmentVariable("UPDATE") != null)
+        if (Environment.GetEnvironmentVariable("DISABLE_UPDATE") == null)
         {
             thread.Start();
         }
@@ -92,6 +92,7 @@ public class Updater : IDisposable
             foreach (ZipArchiveEntry entry in zip.Entries)
             {
                 entry.ExtractToFile(entry.FullName + ".new");
+                newFiles.Add(entry.FullName);
             }
         }
         File.Delete(file);
@@ -164,7 +165,11 @@ public class Updater : IDisposable
 
     private string doHttpGetString(string uri)
     {
-        Task<string> task = http.GetStringAsync(uri);
+        HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Get, uri);
+        message.Headers.Add("Accept", "application/json");
+        message.Headers.Add("User-Agent", ".NET");
+        HttpResponseMessage response = http.Send(message);
+        Task<string> task = response.Content.ReadAsStringAsync();
         task.Wait(1000 * 60);
         return task.Result;
     }
@@ -179,7 +184,7 @@ public class Updater : IDisposable
     private IEnumerable<string> ProvideFiles()
     {
         return Directory.EnumerateFiles(".", "", SearchOption.AllDirectories)
-            .Where(file => (File.GetAttributes(file) & FileAttributes.Directory) != 0)
+            .Where(file => (File.GetAttributes(file) & FileAttributes.Directory) == 0)
             .Where(file => !file.EndsWith(".log"))
             .Where(file => !file.EndsWith(VERSION_FILE.Substring(VERSION_FILE.LastIndexOf('\\'))));
     }
@@ -229,7 +234,14 @@ public class Updater : IDisposable
 
     private static string ReadCurrentVersion()
     {
-        return File.ReadAllText(VERSION_FILE);
+        try
+        {
+            return File.ReadAllText(VERSION_FILE);
+        }
+        catch (FileNotFoundException)
+        {
+            return "";
+        }
     }
 
     private static void SaveCurrentVersion(string version)

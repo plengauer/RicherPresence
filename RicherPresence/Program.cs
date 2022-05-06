@@ -50,7 +50,7 @@ Sdk.CreateMeterProviderBuilder()
 
 bool[] running = new bool[] { true };
 
-using (Updater updater = new Updater("https://github.com/plengauer/RicherPresence", () =>
+using (Updater updater = new Updater("https://api.github.com/repos/plengauer/RicherPresence", () =>
 {
     lock (running)
     {

@@ -920,7 +920,7 @@ namespace Test
         {
             private Update update;
 
-            public TestableRDR2RichPresenceManager(Screen screen, OCR ocr, Update update) : base(screen, ocr, 0, true, false)
+            public TestableRDR2RichPresenceManager(Screen screen, OCR ocr, Update update) : base(screen, ocr, 0, false, false)
             {
                 this.update = update;
             }

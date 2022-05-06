@@ -70,7 +70,7 @@ public class BlockingRevisionedQueue<T>
         }
     }
 
-    public T Dequeue()
+    public T Dequeue(bool skipWhenOutOfOrder)
     {
         lock (monitor)
         {
@@ -79,7 +79,7 @@ public class BlockingRevisionedQueue<T>
             {
                 dequeuer = true;
                 while (queue.Count == 0) Monitor.Wait(monitor);
-                long end = Environment.TickCount64 + revisionTimeout;
+                long end = skipWhenOutOfOrder ? Environment.TickCount64 + revisionTimeout : long.MaxValue;
                 while (!queue.ContainsKey(nextRevision) && Environment.TickCount64 < end) Monitor.Wait(monitor, Math.Max(1, (int)(end - Environment.TickCount64)));
                 while (!queue.ContainsKey(nextRevision)) nextRevision++;
                 T item = queue[nextRevision];
