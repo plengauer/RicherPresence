@@ -10,10 +10,23 @@ public class BlockingQueue<T>
     private readonly int maxSize;
     private readonly object monitor = new object();
     private readonly LinkedList<T> queue = new LinkedList<T>();
+    private int revision;
 
     public BlockingQueue(int maxSize)
     {
         this.maxSize = maxSize;
+        revision = 0;
+    }
+
+    public int Revision
+    {
+        get
+        {
+            lock (monitor)
+            {
+                return revision;
+            }
+        }
     }
 
     public int Count
@@ -33,17 +46,17 @@ public class BlockingQueue<T>
         {
             queue.Clear();
             Monitor.PulseAll(monitor);
+            revision++;
         }
     }
 
-    public bool Enqueue(T item, bool blockWhenFull)
+    public bool Enqueue(T item)
     {
         lock (monitor)
         {
-            while (queue.Count == maxSize)
-                if (blockWhenFull) Monitor.Wait(monitor);
-                else return false;
+            while (maxSize > 0 && queue.Count == maxSize) Monitor.Wait(monitor);
             queue.AddLast(item);
+            revision++;
             Monitor.PulseAll(monitor);
             return true;
         }
@@ -58,6 +71,7 @@ public class BlockingQueue<T>
             T item = queue.First.Value;
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
             queue.RemoveFirst();
+            revision++;
             Monitor.PulseAll(monitor);
             return item;
         }

@@ -18,7 +18,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
     private Screen screen;
     private OCR ocr;
     private int sleepTime;
-    private bool canDrop;
+    private bool limitQueues;
     private bool deleteCaptures;
 
     private long nextID;
@@ -26,7 +26,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
     private object monitor;
     private BlockingQueue<Item> queueCaptures;
     private BlockingRevisionedQueue<Item> queueOCRs;
-    private BlockingRevisionedQueue<Item> queueActivities;
+    private BlockingQueue<Item> queueActivities;
 
     private struct Item
     {
@@ -53,20 +53,20 @@ public class RDR2RichPresenceManager : RichPresenceManager
     //TODO make some detector base classes, like for showdowns, with lobby screen, and so on
     // for example we can check lobby screen, and if that is gone for several seconds, lets assume it started
     // also, try to parse the timer
-    public RDR2RichPresenceManager(Screen screen, OCR ocr, int sleepTime, bool canDrop = true, bool deleteCaptures = true) : base("RDR2")
+    public RDR2RichPresenceManager(Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base("RDR2")
     {
         this.screen = screen;
         this.ocr = ocr;
         this.sleepTime = sleepTime;
-        this.canDrop = canDrop;
+        this.limitQueues = limitQueues;
         this.deleteCaptures = deleteCaptures;
 
         nextID = 0;
         nextContext = new ActivityContext();
         monitor = new object();
-        queueCaptures = new BlockingQueue<Item>(MAX_QUEUE_LENGTH);
-        queueOCRs = new BlockingRevisionedQueue<Item>(MAX_QUEUE_LENGTH, item => item.Id, 1000 * 60, nextID);
-        queueActivities = new BlockingRevisionedQueue<Item>(MAX_QUEUE_LENGTH, item => item.Id, 1000 * 10, nextID);
+        queueCaptures = new BlockingQueue<Item>(limitQueues ? MAX_QUEUE_LENGTH : 0);
+        queueOCRs = new BlockingRevisionedQueue<Item>(limitQueues ? MAX_QUEUE_LENGTH : 0, item => item.Id, 1000 * 60, nextID);
+        queueActivities = new BlockingQueue<Item>(limitQueues ? MAX_QUEUE_LENGTH : 0);
 
         threadTrigger = threadParse = threadUpdate = null;
         threadsOCR = threadsCapture = null;
@@ -192,9 +192,9 @@ public class RDR2RichPresenceManager : RichPresenceManager
         
         threadTrigger = new Thread(() => RunTrigger()) { Name = GetType().Name + " Trigger" };
         threadsCapture = new List<Thread?>();
-        for (int i = 0; i < 1/*60 * 2*/; i++) threadsCapture.Add(new Thread(() => RunCapture()) { Name = GetType().Name + " Capture " + i });
+        for (int i = 0; i < 60 * 2; i++) threadsCapture.Add(new Thread(() => RunCapture()) { Name = GetType().Name + " Capture " + i });
         threadsOCR = new List<Thread?>();
-        for (int i = 0; i < 1/*Environment.ProcessorCount*/; i++) threadsOCR.Add(new Thread(() => RunOCR()) { Name = GetType().Name + " OCR " + i });
+        for (int i = 0; i < Environment.ProcessorCount; i++) threadsOCR.Add(new Thread(() => RunOCR()) { Name = GetType().Name + " OCR " + i });
         threadParse = new Thread(() => RunParse()) { Name = GetType().Name + " Parse" };
         threadUpdate = new Thread(() => RunUpdate(presence)) { Name = GetType().Name + " Update" };
 
@@ -202,7 +202,6 @@ public class RDR2RichPresenceManager : RichPresenceManager
         nextContext = new ActivityContext();
         queueCaptures.Clear();
         queueOCRs.Reset(nextID);
-        queueActivities.Reset(nextID);
 
         threadTrigger.Start();
         threadsCapture.ForEach(t => t?.Start());
@@ -213,8 +212,17 @@ public class RDR2RichPresenceManager : RichPresenceManager
 
     protected override void Stop(IRichPresence presence)
     {
+        // working theory: OCRs are all done, because queue is filled up very fast, second queue is killed because interrupt also interurpts when somebody is waiting for a lock
         // in theory we can jsut interrupt all in any order, dont care about what is still in the queue
         // however, since the tests work on simulated data, we have to make sure all is processed correctly
+        // ATTENTION: interrupt will not just interrupt waits, but also monitor enters
+        // this is why we wait for the queues to stabilize and then slowly shut everything down
+        int revision = 0;
+        while (revision != (revision = queueCaptures.Revision + queueOCRs.Revision + queueActivities.Revision))
+        {
+            Thread.Sleep(1000 * 10);
+        }
+
         threadTrigger?.InterruptFixed();
         threadsCapture?.ForEach(t => t?.InterruptFixed());
         threadTrigger?.Join();
@@ -291,7 +299,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
                 {
                     string? screenshot = screen.Capture(myID);
                     if (screenshot == null) continue;
-                    if (!queueCaptures.Enqueue(new Item { Id = myID, screenshot = screenshot, context = myContext }, !canDrop)) File.Delete(screenshot);
+                    if (!queueCaptures.Enqueue(new Item { Id = myID, screenshot = screenshot, context = myContext })) File.Delete(screenshot);
                 }
                 catch (Exception exception)
                 {
@@ -322,7 +330,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
                 {
                     item.text = ocr.Parse(item.screenshot);
                     if (item.text == null) continue;
-                    queueOCRs.Enqueue(item, !canDrop);
+                    queueOCRs.Enqueue(item);
                 }
                 catch (Exception exception)
                 {
@@ -351,14 +359,14 @@ public class RDR2RichPresenceManager : RichPresenceManager
         {
             try
             {
-                Item item = queueOCRs.Dequeue(canDrop);
+                Item item = queueOCRs.Dequeue();
                 if (item.text == null) continue;
                 using var span = activities.StartActivity("discord.rich_presence.rdr2.parse", ActivityKind.Internal, item.context ?? new ActivityContext());
                 try
                 {
                     item.activity = ParseActivity(item.text);
                     if (!item.activity.HasValue || Equals(item.activity.Value, activity)) continue;
-                    queueActivities.Enqueue(item, !canDrop);
+                    queueActivities.Enqueue(item);
                     activity = item.activity.Value;
                 }
                 catch (Exception exception)
@@ -384,7 +392,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
         {
             try
             {
-                Item item = queueActivities.Dequeue(canDrop);
+                Item item = queueActivities.Dequeue();
                 if (item.activity == null) continue;
                 using var span = activities.StartActivity("discord.rich_presence.rdr2.update", ActivityKind.Internal, item.context ?? new ActivityContext());
                 try

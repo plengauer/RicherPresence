@@ -14,6 +14,7 @@ public class BlockingRevisionedQueue<T>
     private readonly RevisionGetter getRevision;
     private readonly long revisionTimeout;
     private readonly SortedList<long, T> queue = new SortedList<long, T>();
+    private int revision;
 
     private long nextRevision;
     private bool dequeuer;
@@ -23,6 +24,7 @@ public class BlockingRevisionedQueue<T>
         this.maxSize = maxSize;
         this.getRevision = getRevision;
         this.revisionTimeout = revisionTimeout;
+        this.revision = 0;
         this.nextRevision = firstRevision;
         this.dequeuer = false;
     }
@@ -32,6 +34,18 @@ public class BlockingRevisionedQueue<T>
         lock (monitor) {
             Clear();
             nextRevision = firstRevision;
+            revision++;
+        }
+    }
+
+    public int Revision
+    {
+        get
+        {
+            lock (monitor)
+            {
+                return revision;
+            }
         }
     }
 
@@ -51,26 +65,26 @@ public class BlockingRevisionedQueue<T>
         lock (monitor)
         {
             queue.Clear();
+            revision++;
             Monitor.PulseAll(monitor);
         }
     }
 
-    public bool Enqueue(T item, bool blockWhenFull)
+    public bool Enqueue(T item)
     {
         lock (monitor)
         {
-            while (queue.Count == maxSize)
-                if (blockWhenFull) Monitor.Wait(monitor);
-                else return false;
+            while (maxSize > 0 && queue.Count == maxSize) Monitor.Wait(monitor);
             long revision = getRevision.Invoke(item);
             if (revision < nextRevision) return false;
             queue.Add(revision, item);
+            revision++;
             Monitor.PulseAll(monitor);
             return true;
         }
     }
 
-    public T Dequeue(bool skipWhenOutOfOrder)
+    public T Dequeue()
     {
         lock (monitor)
         {
@@ -79,12 +93,13 @@ public class BlockingRevisionedQueue<T>
             {
                 dequeuer = true;
                 while (queue.Count == 0) Monitor.Wait(monitor);
-                long end = skipWhenOutOfOrder ? Environment.TickCount64 + revisionTimeout : long.MaxValue;
+                long end = Environment.TickCount64 + revisionTimeout;
                 while (!queue.ContainsKey(nextRevision) && Environment.TickCount64 < end) Monitor.Wait(monitor, Math.Max(1, (int)(end - Environment.TickCount64)));
                 while (!queue.ContainsKey(nextRevision)) nextRevision++;
                 T item = queue[nextRevision];
                 queue.Remove(nextRevision);
                 nextRevision++;
+                revision++;
                 Monitor.PulseAll(monitor);
                 return item;
             }
