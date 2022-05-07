@@ -43,7 +43,7 @@ public class Tesseract : OCR
             process.ErrorDataReceived += (sender, args) => log.Add(args.Data);
             process?.BeginOutputReadLine();
             process?.BeginErrorReadLine();
-            process?.WaitForExitFixed();
+            process?.WaitForExit();
         }
         string str = string.Join('\n', output.ToArray());
         s?.AddTag("tesseract.result", str);

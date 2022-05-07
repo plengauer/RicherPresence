@@ -223,18 +223,18 @@ public class RDR2RichPresenceManager : RichPresenceManager
             Thread.Sleep(1000 * 10);
         }
 
-        threadTrigger?.InterruptFixed();
-        threadsCapture?.ForEach(t => t?.InterruptFixed());
+        threadTrigger?.Interrupt();
+        threadsCapture?.ForEach(t => t?.Interrupt());
         threadTrigger?.Join();
         threadsCapture?.ForEach(t => t?.Join());
         queueCaptures.WaitForEmpty();
-        threadsOCR?.ForEach(t => t?.InterruptFixed());
+        threadsOCR?.ForEach(t => t?.Interrupt());
         threadsOCR?.ForEach(t => t?.Join());
         queueOCRs.WaitForEmpty();
-        threadParse?.InterruptFixed();
+        threadParse?.Interrupt();
         threadParse?.Join();
         queueActivities.WaitForEmpty();
-        threadUpdate?.InterruptFixed();
+        threadUpdate?.Interrupt();
         threadUpdate?.Join();
 
         queueCaptures.Clear();

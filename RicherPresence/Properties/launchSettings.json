@@ -1,6 +1,19 @@
 {
   "profiles": {
-    "Discord": {
+    "Install": {
+      "commandName": "Project",
+      "workingDirectory": "C:\\Program Files\\RicherPresence",
+      "environmentVariables": {
+        "SLEEP_TIME": "0",
+        "ASSUME_PROCESS_RUNNING": "true",
+        "DISCORD_RICH_PRESENCE_SIMULATE": "true",
+        "FFMPEG_EXE": "C:\\Users\\pleng\\Scripts\\ffmpeg-5.0-essentials_build\\bin\\ffmpeg.exe",
+        "LOG_DIR": "D:\\Windows\\Recordings\\Red Dead Redemption 2\\RichPresenceInput\\Live",
+        "TEMP_DIR": "D:\\Windows\\Recordings\\Red Dead Redemption 2\\RichPresenceInput\\Live"
+      },
+      "hotReloadEnabled": false
+    },
+    "IDE": {
       "commandName": "Project",
       "environmentVariables": {
         "SLEEP_TIME": "0",

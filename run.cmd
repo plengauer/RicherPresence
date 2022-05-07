@@ -1,3 +1,3 @@
 :start
-.\RicherPresence.exe
+RicherPresence.exe
 goto start
