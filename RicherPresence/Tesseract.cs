@@ -7,9 +7,21 @@ using System.Diagnostics;
 
 public class Tesseract : OCR
 {
-    private const string PATH = "C:\\Program Files\\Tesseract-OCR\\tesseract.exe";
+    private static string[] PATHS = { ".\\tesseract.exe", "C:\\Program Files\\Tesseract-OCR\\tesseract.exe" };
 
     private static ActivitySource ACTIVITIES = new ActivitySource(Observability.ACTIVITY_SOURCE_NAME);
+
+    private static string GetPath()
+    {
+        for (int i = 0; i < PATHS.Length; i++)
+        {
+            if (File.Exists(PATHS[i]))
+            {
+                return PATHS[i];
+            }
+        }
+        throw new Exception("Could not find tesseract");
+    }
 
     public string Parse(string file)
     {
@@ -18,7 +30,7 @@ public class Tesseract : OCR
         List<string?> log = new List<string?>();
         ProcessStartInfo info = new ProcessStartInfo()
         {
-            FileName = PATH,
+            FileName = GetPath(),
             Arguments = "\"" + file + "\" stdout",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
