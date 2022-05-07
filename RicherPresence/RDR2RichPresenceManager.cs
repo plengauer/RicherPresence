@@ -217,13 +217,14 @@ public class RDR2RichPresenceManager : RichPresenceManager
         // however, since the tests work on simulated data, we have to make sure all is processed correctly
         // ATTENTION: interrupt will not just interrupt waits, but also monitor enters
         // this is why we wait for the queues to stabilize and then slowly shut everything down
-        int revision = 0;
-        while (revision != (revision = queueCaptures.Revision + queueOCRs.Revision + queueActivities.Revision)) Thread.Sleep(1000 * 10);
-
         threadTrigger?.Interrupt();
         threadsCapture?.ForEach(t => t?.Interrupt());
         threadTrigger?.Join();
         threadsCapture?.ForEach(t => t?.Join());
+
+        int revision = 0;
+        while (revision != (revision = queueCaptures.Revision + queueOCRs.Revision + queueActivities.Revision)) Thread.Sleep(1000 * 10);
+
         queueCaptures.WaitForEmpty();
         threadsOCR?.ForEach(t => t?.Interrupt());
         threadsOCR?.ForEach(t => t?.Join());
