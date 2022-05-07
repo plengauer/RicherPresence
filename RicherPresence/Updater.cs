@@ -91,6 +91,9 @@ public class Updater : IDisposable
         {
             foreach (ZipArchiveEntry entry in zip.Entries)
             {
+                string name = entry.FullName; // zip paths are always forward slashes
+                if (entry.FullName.Contains("/"))
+                    Directory.CreateDirectory(name.Substring(0, entry.FullName.LastIndexOf("/")));
                 entry.ExtractToFile(entry.FullName + ".new");
                 newFiles.Add(entry.FullName);
             }
