@@ -218,10 +218,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
         // ATTENTION: interrupt will not just interrupt waits, but also monitor enters
         // this is why we wait for the queues to stabilize and then slowly shut everything down
         int revision = 0;
-        while (revision != (revision = queueCaptures.Revision + queueOCRs.Revision + queueActivities.Revision))
-        {
-            Thread.Sleep(1000 * 10);
-        }
+        while (revision != (revision = queueCaptures.Revision + queueOCRs.Revision + queueActivities.Revision)) Thread.Sleep(1000 * 10);
 
         threadTrigger?.Interrupt();
         threadsCapture?.ForEach(t => t?.Interrupt());
@@ -397,7 +394,10 @@ public class RDR2RichPresenceManager : RichPresenceManager
                 using var span = activities.StartActivity("discord.rich_presence.rdr2.update", ActivityKind.Internal, item.context ?? new ActivityContext());
                 try
                 {
-                    presence.Update(item.activity.Value);
+                    Discord.Activity activity = item.activity.Value;
+                    ActivityContext context = span?.Context ?? new ActivityContext();
+                    activity.Secrets.Match = "OpenTelemetry;trace-id=" + context.TraceId.ToHexString() + ";span-id=" + context.SpanId.ToHexString() + ";trace-state=" + context.TraceState + ";trace-flags=" + context.TraceFlags.ToString();
+                    presence.Update(activity);
                 }
                 catch (Exception exception)
                 {
