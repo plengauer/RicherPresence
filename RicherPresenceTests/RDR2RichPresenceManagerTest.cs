@@ -25,6 +25,7 @@ namespace Test
         // [ClassInitialize]
         static RDR2RichPresenceManagerTest() {
             if (!MONITOR) return;
+            string token = Environment.GetEnvironmentVariable("DISCORD_RICHER_PRESENCE_DYNATRACE_API_TOKEN") ?? "<no token>";
             Sdk.CreateTracerProviderBuilder()
                 .SetSampler(new AlwaysOffSampler())
                 .AddSource(Observability.ACTIVITY_SOURCE_NAME)
@@ -33,7 +34,7 @@ namespace Test
                 {
                     options.Endpoint = new Uri("https://ldj78075.sprint.dynatracelabs.com/api/v2/otlp/v1/traces");
                     options.Protocol = OtlpExportProtocol.HttpProtobuf;
-                    options.Headers = "Authorization=Api-Token dt0c01.JPEOKTVXI5MHU7SWQ3RU6P4O.IQBVZILPY5A4M2QEJC5AX2JQ4GOWL3PWKBU4N7W4NT6WKR4HKTSD64W3CNLQLXHV";
+                    options.Headers = "Authorization=Api-Token " + token;
                     options.ExportProcessorType = ExportProcessorType.Batch;
                 })
                 .Build();
@@ -43,7 +44,7 @@ namespace Test
                 .AddDynatraceExporter(cfg =>
                 {
                     cfg.Url = "https://ldj78075.sprint.dynatracelabs.com/api/v2/metrics/ingest";
-                    cfg.ApiToken = "dt0c01.TFMGCJDV6345JGVKAM5DSUQT.7N4DX4NFSTS2LRGTCWGZRFUEC6ZFPS23QKD4IW7HX4OIMHW64X53K5JYRGMDE437";
+                    cfg.ApiToken = token;
                     cfg.DefaultDimensions = new List<KeyValuePair<string, string>>()
                     {
                         new KeyValuePair<string, string>("service.name", "RDR2 Discord Rich Presence Test"),
