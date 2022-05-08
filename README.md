@@ -14,5 +14,5 @@ INSTALL INSTRUCTIONS<p>
 6) In "General", use the option "Change User or Group" to adjust it to your own user.
 7) In "Triggers", use the option "Edit" -> "Change User" to adjust it to your own user.
 8) Click "OK"
-9) Either (A) restart or computer or (B) search the "Richer Presence" task in the list and click "Run".
+9) Either (A) restart your computer or (B) search the "Richer Presence" task in the list and click "Run".
 10) Enjoy
