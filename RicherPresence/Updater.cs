@@ -119,6 +119,7 @@ public class Updater : IDisposable
             }
         }
 
+        SaveCurrentVersion(date);
         return true;
     }
 
@@ -222,12 +223,7 @@ public class Updater : IDisposable
 
     private bool IsNewerVersion(string newVersion)
     {
-        if (!IsNewerVersion(ReadCurrentVersion(), newVersion))
-        {
-            return false;
-        }
-        SaveCurrentVersion(newVersion);
-        return true;
+        return IsNewerVersion(ReadCurrentVersion(), newVersion);
     }
 
     private static bool IsNewerVersion(string current, string other)
