@@ -62,6 +62,7 @@ using (Updater updater = new Updater("https://api.github.com/repos/plengauer/Ric
     Screen screen = new DXGIOutputDuplication();
     OCR ocr = new Tesseract();
     using RDR2RichPresenceManager presence = new RDR2RichPresenceManager(screen, ocr, 1000);
+    Console.WriteLine("ready");
     lock (running)
     {
         while (running[0]) Monitor.Wait(running);
