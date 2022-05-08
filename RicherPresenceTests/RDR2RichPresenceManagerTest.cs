@@ -940,6 +940,11 @@ namespace Test
             {
                 return new TestableRichPresence(update);
             }
+
+            public override void Dispose()
+            {
+                Dispose(true);
+            }
         }
 
         private class TestableRichPresence : IRichPresence

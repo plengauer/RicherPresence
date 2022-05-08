@@ -104,6 +104,6 @@ public abstract class RichPresenceManager : IDisposable
 
     public virtual void Dispose()
     {
-        Dispose(true);
+        Dispose(false);
     }
 }
