@@ -39,7 +39,7 @@ Sdk.CreateTracerProviderBuilder()
 
 Sdk.CreateMeterProviderBuilder()
     .AddMeter(Observability.METER_SOURCE_NAME)
-    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("RDR2 Discord Rich Presence").AddAttributes(dt_metadata))
+    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Discord Rich Presence").AddAttributes(dt_metadata))
     .AddDynatraceExporter(cfg =>
     {
         cfg.Url = "https://ldj78075.sprint.dynatracelabs.com/api/v2/metrics/ingest";
