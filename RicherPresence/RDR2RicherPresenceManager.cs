@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 
-public class RDR2RichPresenceManager : RichPresenceManager
+public class RDR2RicherPresenceManager : RichPresenceManager
 {
 
     private const long CLIENT_ID = 947170931015565323;
@@ -53,7 +53,7 @@ public class RDR2RichPresenceManager : RichPresenceManager
     //TODO make some detector base classes, like for showdowns, with lobby screen, and so on
     // for example we can check lobby screen, and if that is gone for several seconds, lets assume it started
     // also, try to parse the timer
-    public RDR2RichPresenceManager(Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base("RDR2")
+    public RDR2RicherPresenceManager(Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base("RDR2")
     {
         this.screen = screen;
         this.ocr = ocr;

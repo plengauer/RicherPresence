@@ -908,7 +908,7 @@ namespace Test
         {
             List<Discord.Activity> actual = new List<Discord.Activity>();
             ScreenSimulator simulator = new ScreenSimulator(directory);
-            using (RDR2RichPresenceManager manager = new TestableRDR2RichPresenceManager(simulator, new Tesseract(), activity => actual.Add(activity)))
+            using (RDR2RicherPresenceManager manager = new TestableRDR2RichPresenceManager(simulator, new Tesseract(), activity => actual.Add(activity)))
             {
                 simulator.Join();
             }
@@ -917,7 +917,7 @@ namespace Test
 
         private delegate void Update(Discord.Activity activity);
 
-        private class TestableRDR2RichPresenceManager : RDR2RichPresenceManager
+        private class TestableRDR2RichPresenceManager : RDR2RicherPresenceManager
         {
             private Update update;
 
