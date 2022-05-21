@@ -397,7 +397,8 @@ public class RDR2RicherPresenceManager : RichPresenceManager
                 {
                     Discord.Activity activity = item.activity.Value;
                     ActivityContext context = span?.Context ?? new ActivityContext();
-                    activity.Party.Id = "OpenTelemetry;trace-id=" + context.TraceId.ToHexString() + ";span-id=" + context.SpanId.ToHexString() + ";trace-state=" + context.TraceState + ";trace-flags=" + context.TraceFlags.ToString();
+                    activity.Party.Id = "OT;" + context.TraceId.ToHexString() + ";" + context.SpanId.ToHexString() + ";" + context.TraceState;
+                    span?.AddTag("context.size", activity.Party.Id.Length);
                     presence.Update(activity);
                 }
                 catch (Exception exception)
