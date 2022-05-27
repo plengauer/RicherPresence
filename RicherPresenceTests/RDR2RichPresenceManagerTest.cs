@@ -917,7 +917,7 @@ namespace Test
 
         private delegate void Update(Discord.Activity activity);
 
-        private class TestableRDR2RichPresenceManager : RicherPresenceManager
+        private class TestableRDR2RichPresenceManager : RDR2RicherPresenceManager
         {
             private Update update;
 
