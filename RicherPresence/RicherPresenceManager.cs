@@ -13,6 +13,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
 
     private const int MAX_QUEUE_LENGTH = 60 * 5;
 
+    private string name;
     private Screen screen;
     private OCR ocr;
     private int sleepTime;
@@ -43,8 +44,9 @@ public abstract class RicherPresenceManager : RichPresenceManager
     private ActivitySource activities;
     private Meter meter;
 
-    public RicherPresenceManager(Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base("RDR2")
+    public RicherPresenceManager(string name, Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base("RDR2")
     {
+        this.name = name;
         this.screen = screen;
         this.ocr = ocr;
         this.sleepTime = sleepTime;
@@ -64,9 +66,9 @@ public abstract class RicherPresenceManager : RichPresenceManager
         meter = new Meter(Observability.METER_SOURCE_NAME, "1.0.0");
 
         meter.CreateObservableGauge<int>("queue.length", () => new Measurement<int>[] {
-            new Measurement<int>(  queueCaptures.Count, new KeyValuePair<string, object?>("queue.name",   "captures")),
-            new Measurement<int>(      queueOCRs.Count, new KeyValuePair<string, object?>("queue.name",       "ocrs")),
-            new Measurement<int>(queueActivities.Count, new KeyValuePair<string, object?>("queue.name", "activities"))
+            new Measurement<int>(  queueCaptures.Count, new KeyValuePair<string, object?>("activity.name", name), new KeyValuePair<string, object?>("queue.name",   "captures")),
+            new Measurement<int>(      queueOCRs.Count, new KeyValuePair<string, object?>("activity.name", name), new KeyValuePair<string, object?>("queue.name",       "ocrs")),
+            new Measurement<int>(queueActivities.Count, new KeyValuePair<string, object?>("activity.name", name), new KeyValuePair<string, object?>("queue.name", "activities"))
         });
     }
 
