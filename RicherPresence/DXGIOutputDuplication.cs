@@ -38,9 +38,11 @@ public class DXGIOutputDuplication : Screen
                 process.PriorityClass = ProcessPriorityClass.RealTime;
                 // process.OutputDataReceived += (s, e) => Console.WriteLine(e.Data);
                 // process.ErrorDataReceived += (s, e) => Console.WriteLine(e.Data);
-                process?.BeginOutputReadLine();
-                process?.BeginErrorReadLine();
-                process?.WaitForExit();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                process.WaitForExit();
+                int code = process.ExitCode;
+                s?.AddTag("process.exit.code", "" + code);
             }
         }
         return filename;

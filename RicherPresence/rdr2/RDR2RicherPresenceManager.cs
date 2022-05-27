@@ -119,6 +119,11 @@ public class RDR2RicherPresenceManager : RicherPresenceManager
         return new RichPresence(CLIENT_ID, STEAM_APPLICATION_ID);
     }
 
+    protected override Discord.Activity CreateInitialActivity()
+    {
+        return RDR2ActivityFactory.Create(null, null);
+    }
+
     protected override Discord.Activity? ParseActivity(string text)
     {
         //TODO maybe maintaining the current "active" detector is a necessary optimization

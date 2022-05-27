@@ -66,9 +66,9 @@ public abstract class RicherPresenceManager : RichPresenceManager
         meter = new Meter(Observability.METER_SOURCE_NAME, "1.0.0");
 
         meter.CreateObservableGauge<int>("queue.length", () => new Measurement<int>[] {
-            new Measurement<int>(  queueCaptures.Count, new KeyValuePair<string, object?>("activity.name", name), new KeyValuePair<string, object?>("queue.name",   "captures")),
-            new Measurement<int>(      queueOCRs.Count, new KeyValuePair<string, object?>("activity.name", name), new KeyValuePair<string, object?>("queue.name",       "ocrs")),
-            new Measurement<int>(queueActivities.Count, new KeyValuePair<string, object?>("activity.name", name), new KeyValuePair<string, object?>("queue.name", "activities"))
+            new Measurement<int>(  queueCaptures.Count, new KeyValuePair<string, object?>("discord.activity.name", name), new KeyValuePair<string, object?>("queue.name",   "captures")),
+            new Measurement<int>(      queueOCRs.Count, new KeyValuePair<string, object?>("discord.activity.name", name), new KeyValuePair<string, object?>("queue.name",       "ocrs")),
+            new Measurement<int>(queueActivities.Count, new KeyValuePair<string, object?>("discord.activity.name", name), new KeyValuePair<string, object?>("queue.name", "activities"))
         });
     }
 
@@ -151,7 +151,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
                 Thread.Sleep(Math.Max(1, Math.Min(sleepTime, sleepTime - duration)));
                 time = Environment.TickCount64;
                 using var root = activities.StartActivity("discord.richer_presence", ActivityKind.Server);
-                root?.AddTag("activity.name", name);
+                root?.AddTag("discord.activity.name", name);
                 lock (monitor)
                 {
                     nextContext = root?.Context;
@@ -280,7 +280,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
 
     private void RunUpdate(IRichPresence presence)
     {
-        presence.Update(RDR2ActivityFactory.Create(null, null));
+        presence.Update(CreateInitialActivity());
         for (;;)
         {
             try
@@ -308,6 +308,8 @@ public abstract class RicherPresenceManager : RichPresenceManager
         }
         presence.Clear();
     }
+
+    protected abstract Discord.Activity CreateInitialActivity();
 
     private static bool Equals(Discord.Activity a1, Discord.Activity a2)
     {
