@@ -22,31 +22,33 @@ foreach (string name in new string[] { "dt_metadata_e617c525669e072eebe3d0f08212
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
-string token = Environment.GetEnvironmentVariable("DISCORD_RICHER_PRESENCE_DYNATRACE_API_TOKEN") ?? "<no token>";
-
-Sdk.CreateTracerProviderBuilder()
-    .SetSampler(new AlwaysOnSampler())
-    .AddSource(Observability.ACTIVITY_SOURCE_NAME)
-    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Discord Richer Presence").AddAttributes(dt_metadata))
-    .AddOtlpExporter(options =>
-    {
-        options.Endpoint = new Uri("https://ldj78075.sprint.dynatracelabs.com/api/v2/otlp/v1/traces");
-        options.Protocol = OtlpExportProtocol.HttpProtobuf;
-        options.Headers = "Authorization=Api-Token " + token;
-        options.ExportProcessorType = ExportProcessorType.Batch;
-    })
-    .Build();
-
-Sdk.CreateMeterProviderBuilder()
-    .AddMeter(Observability.METER_SOURCE_NAME)
-    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Discord Rich Presence").AddAttributes(dt_metadata))
-    .AddDynatraceExporter(cfg =>
-    {
-        cfg.Url = "https://ldj78075.sprint.dynatracelabs.com/api/v2/metrics/ingest";
-        cfg.ApiToken = token;
-        cfg.DefaultDimensions = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("service.name", "Discord Richer Presence") };
-    })
-    .Build();
+string? token = Environment.GetEnvironmentVariable("DISCORD_RICHER_PRESENCE_DYNATRACE_API_TOKEN");
+if (token != null)
+{
+    string service = "Discord Richer Presence";
+    Sdk.CreateTracerProviderBuilder()
+        .SetSampler(new AlwaysOnSampler())
+        .AddSource(Observability.ACTIVITY_SOURCE_NAME)
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(service).AddAttributes(dt_metadata))
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri("https://ldj78075.sprint.dynatracelabs.com/api/v2/otlp/v1/traces");
+            options.Protocol = OtlpExportProtocol.HttpProtobuf;
+            options.Headers = "Authorization=Api-Token " + token;
+            options.ExportProcessorType = ExportProcessorType.Batch;
+        })
+        .Build();
+    Sdk.CreateMeterProviderBuilder()
+        .AddMeter(Observability.METER_SOURCE_NAME)
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(service).AddAttributes(dt_metadata))
+        .AddDynatraceExporter(cfg =>
+        {
+            cfg.Url = "https://ldj78075.sprint.dynatracelabs.com/api/v2/metrics/ingest";
+            cfg.ApiToken = token;
+            cfg.DefaultDimensions = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("service.name", service) };
+        })
+        .Build();
+}
 
 bool[] running = new bool[] { true };
 
@@ -61,7 +63,7 @@ using (Updater updater = new Updater("https://api.github.com/repos/plengauer/Ric
 {
     Screen screen = new DXGIOutputDuplication();
     OCR ocr = new Tesseract();
-    using RDR2RicherPresenceManager presence = new RDR2RicherPresenceManager(screen, ocr, 1000);
+    using RDR2RicherPresenceManager rdr2 = new RDR2RicherPresenceManager(screen, ocr, 1000);
     Console.WriteLine("ready");
     lock (running)
     {
