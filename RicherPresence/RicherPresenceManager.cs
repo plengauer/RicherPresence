@@ -151,6 +151,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
                 Thread.Sleep(Math.Max(1, Math.Min(sleepTime, sleepTime - duration)));
                 time = Environment.TickCount64;
                 using var root = activities.StartActivity("discord.richer_presence", ActivityKind.Server);
+                root?.AddTag("activity.name", name);
                 lock (monitor)
                 {
                     nextContext = root?.Context;
