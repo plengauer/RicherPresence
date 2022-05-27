@@ -18,7 +18,7 @@ public class RDR2RicherPresenceManager : RicherPresenceManager
     private RDR2InfoParser location;
     private RDR2ActivityDetector[] detectors;
 
-    public RDR2RicherPresenceManager(Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base(screen, ocr, sleepTime, limitQueues, deleteCaptures)
+    public RDR2RicherPresenceManager(Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base("Red Dead Redemption 2", screen, ocr, sleepTime, limitQueues, deleteCaptures)
     {
         location = new RDR2LocationParser();
         detectors = new RDR2ActivityDetector[]
