@@ -16,7 +16,6 @@ public abstract class RicherPresenceManager : RichPresenceManager
     private Screen screen;
     private OCR ocr;
     private int sleepTime;
-    private bool limitQueues;
     private bool deleteCaptures;
 
     private long nextID;
@@ -49,7 +48,6 @@ public abstract class RicherPresenceManager : RichPresenceManager
         this.screen = screen;
         this.ocr = ocr;
         this.sleepTime = sleepTime;
-        this.limitQueues = limitQueues;
         this.deleteCaptures = deleteCaptures;
 
         nextID = 0;
