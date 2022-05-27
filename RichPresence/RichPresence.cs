@@ -35,6 +35,9 @@ public class RichPresence : IRichPresence
         span?.SetTag("activity.name", activity.Name);
         span?.SetTag("activity.details", activity.Details);
         span?.SetTag("activity.state", activity.State);
+        ActivityContext context = span?.Context ?? new ActivityContext();
+        activity.Party.Id = "OT;" + context.TraceId.ToHexString() + ";" + context.SpanId.ToHexString() + ";" + context.TraceState;
+        span?.AddTag("context.size", activity.Party.Id.Length);
         lock (discord)
         {
             Console.WriteLine(DateTime.Now + ": " + activity.Name + ", " + activity.Details + ", " + activity.State);
