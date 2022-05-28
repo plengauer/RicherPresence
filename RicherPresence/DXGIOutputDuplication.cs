@@ -49,6 +49,7 @@ public class DXGIOutputDuplication : Screen
                     tags.Add("exception.type", "Non-zero exit code");
                     tags.Add("exception.message", "" + code);
                     s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                    throw new Exception("Non-zero exit code: " + code);
                 }
             }
             if (!File.Exists(filename))
@@ -57,6 +58,7 @@ public class DXGIOutputDuplication : Screen
                 tags.Add("exception.type", "File error");
                 tags.Add("exception.message", "File " + filename + " does not exist");
                 s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                throw new Exception("File does not exist: " + filename);
             }
         }
         return filename;
