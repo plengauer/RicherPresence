@@ -43,6 +43,20 @@ public class DXGIOutputDuplication : Screen
                 process.WaitForExit();
                 int code = process.ExitCode;
                 s?.AddTag("process.exit.code", "" + code);
+                if (code != 0)
+                {
+                    var tags = new ActivityTagsCollection();
+                    tags.Add("exception.type", "Non-zero exit code");
+                    tags.Add("exception.message", "" + code);
+                    s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                }
+            }
+            if (!File.Exists(filename))
+            {
+                var tags = new ActivityTagsCollection();
+                tags.Add("exception.type", "File error");
+                tags.Add("exception.message", "File " + filename + " does not exist");
+                s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
             }
         }
         return filename;

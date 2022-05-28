@@ -46,11 +46,26 @@ public class Tesseract : OCR
             process.WaitForExit();
             int code = process.ExitCode;
             s?.AddTag("process.exit.code", "" + code);
+            if (code != 0)
+            {
+                var tags = new ActivityTagsCollection();
+                tags.Add("exception.type", "Non-zero exit code");
+                tags.Add("exception.message", "" + code);
+                s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+            }
         }
-        string str = string.Join('\n', output.ToArray());
-        s?.AddTag("tesseract.result", str);
-        s?.AddTag("tesseract.log", string.Join('\n', log.ToArray()));
-        return str;
+        string outputStr = string.Join('\n', output.ToArray());
+        string logStr = string.Join('\n', log.ToArray());
+        s?.AddTag("tesseract.result", outputStr);
+        s?.AddTag("tesseract.log", logStr);
+        if (logStr.ToLower().Contains("error"))
+        {
+            var tags = new ActivityTagsCollection();
+            tags.Add("exception.type", "Error log");
+            tags.Add("exception.message", log);
+            s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+        }
+        return outputStr;
     }
 }
 
