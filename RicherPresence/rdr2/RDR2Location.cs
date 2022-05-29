@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-internal class RDR2Location
+public class RDR2Location
 {
 
     private static ActivitySource ACTIVITIES = new ActivitySource(Observability.ACTIVITY_SOURCE_NAME);

@@ -8,14 +8,14 @@ public class RichPresence : IRichPresence
     private Thread thread;
     private bool active;
 
-    public RichPresence(long clientID, uint steamID)
+    public RichPresence(long clientID /* https://discord.com/developers/applications */, uint steamID)
     {
         discord = new Discord.Discord(clientID, (ulong) Discord.CreateFlags.NoRequireDiscord);
         thread = new Thread(() => Run());
         active = true;
 
         // discord.SetLogHook(Discord.LogLevel.Debug, null /*(level, message) => Console.WriteLine(message)*/);
-        discord.GetActivityManager().RegisterSteam(steamID);
+        if (steamID != 0) discord.GetActivityManager().RegisterSteam(steamID);
         thread.Start();
     }
 

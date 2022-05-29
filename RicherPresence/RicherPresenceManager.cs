@@ -44,7 +44,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
     private ActivitySource activities;
     private Meter meter;
 
-    public RicherPresenceManager(string name, Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base("RDR2")
+    public RicherPresenceManager(string name, string executable, Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base(executable)
     {
         this.name = name;
         this.screen = screen;

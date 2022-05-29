@@ -63,7 +63,8 @@ using (Updater updater = new Updater("https://api.github.com/repos/plengauer/Ric
 {
     Screen screen = new DXGIOutputDuplication();
     OCR ocr = new Tesseract();
-    using RDR2RicherPresenceManager rdr2 = new RDR2RicherPresenceManager(screen, ocr, 1000);
+    using var rdr2 = new RDR2RicherPresenceManager(screen, ocr, 1000);
+    using var aoe2de = new AOE2DERicherPresenceManager(screen, ocr, 1000);
     Console.WriteLine("ready");
     lock (running)
     {
