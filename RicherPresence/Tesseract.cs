@@ -55,6 +55,7 @@ public class Tesseract : OCR
                     tags.Add("exception.type", "Non-zero exit code");
                     tags.Add("exception.message", "" + code);
                     s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                    s?.SetStatus(ActivityStatusCode.Error);
                     throw new Exception("Non-zero exit code: " + code);
                 }
             }
@@ -72,6 +73,7 @@ public class Tesseract : OCR
             tags.Add("exception.type", "Error log");
             tags.Add("exception.message", log);
             s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+            s?.SetStatus(ActivityStatusCode.Error);
             throw new Exception("Error OCR'ing " + file);
         }
         return outputStr;

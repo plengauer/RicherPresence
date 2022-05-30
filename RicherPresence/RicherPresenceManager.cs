@@ -200,6 +200,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
                     tags.Add("exception.message", exception.Message);
                     tags.Add("exception.stacktrace", exception.ToString());
                     span?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                    span?.SetStatus(ActivityStatusCode.Error);
                 }
             }
             catch (ThreadInterruptedException)
@@ -231,6 +232,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
                     tags.Add("exception.message", exception.Message);
                     tags.Add("exception.stacktrace", exception.ToString());
                     span?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                    span?.SetStatus(ActivityStatusCode.Error);
                 }
                 finally
                 {
@@ -268,6 +270,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
                     tags.Add("exception.message", exception.Message);
                     tags.Add("exception.stacktrace", exception.ToString());
                     span?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                    span?.SetStatus(ActivityStatusCode.Error);
                 }
             }
             catch (ThreadInterruptedException)
@@ -299,6 +302,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
                     tags.Add("exception.message", exception.Message);
                     tags.Add("exception.stacktrace", exception.ToString());
                     span?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                    span?.SetStatus(ActivityStatusCode.Error);
                 }
             }
             catch (ThreadInterruptedException)
