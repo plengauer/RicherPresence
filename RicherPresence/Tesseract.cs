@@ -37,28 +37,35 @@ public class Tesseract : OCR
             UseShellExecute = false,
             CreateNoWindow = true
         };
-        using (Process? process = Process.Start(info))
+        string outputStr, logStr;
+        try
         {
-            process.OutputDataReceived += (sender, args) => output.Add(args.Data);
-            process.ErrorDataReceived += (sender, args) => log.Add(args.Data);
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            process.WaitForExit();
-            int code = process.ExitCode;
-            s?.AddTag("process.exit.code", "" + code);
-            if (code != 0)
+            using (Process? process = Process.Start(info))
             {
-                var tags = new ActivityTagsCollection();
-                tags.Add("exception.type", "Non-zero exit code");
-                tags.Add("exception.message", "" + code);
-                s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
-                throw new Exception("Non-zero exit code: " + code);
+                process.OutputDataReceived += (sender, args) => output.Add(args.Data);
+                process.ErrorDataReceived += (sender, args) => log.Add(args.Data);
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                process.WaitForExit();
+                int code = process.ExitCode;
+                s?.AddTag("process.exit.code", "" + code);
+                if (code != 0)
+                {
+                    var tags = new ActivityTagsCollection();
+                    tags.Add("exception.type", "Non-zero exit code");
+                    tags.Add("exception.message", "" + code);
+                    s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                    throw new Exception("Non-zero exit code: " + code);
+                }
             }
         }
-        string outputStr = string.Join('\n', output.ToArray());
-        string logStr = string.Join('\n', log.ToArray());
-        s?.AddTag("tesseract.result", outputStr);
-        s?.AddTag("tesseract.log", logStr);
+        finally
+        {
+            outputStr = string.Join('\n', output.ToArray());
+            logStr = string.Join('\n', log.ToArray());
+            s?.AddTag("tesseract.result", outputStr);
+            s?.AddTag("tesseract.log", logStr);
+        }
         if (logStr.ToLower().Contains("error"))
         {
             var tags = new ActivityTagsCollection();

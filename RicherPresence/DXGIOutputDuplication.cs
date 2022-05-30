@@ -31,34 +31,44 @@ public class DXGIOutputDuplication : Screen
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        List<string?> @out = new List<string?>();
+        List<string?> err = new List<string?>();
         using (var s = ACTIVITIES.StartActivity("DXGI_output_duplication", ActivityKind.Client))
         {
-            using (Process? process = Process.Start(infoCaptureVideo))
+            try
             {
-                process.PriorityClass = ProcessPriorityClass.RealTime;
-                // process.OutputDataReceived += (s, e) => Console.WriteLine(e.Data);
-                // process.ErrorDataReceived += (s, e) => Console.WriteLine(e.Data);
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-                process.WaitForExit();
-                int code = process.ExitCode;
-                s?.AddTag("process.exit.code", "" + code);
-                if (code != 0)
+                using (Process? process = Process.Start(infoCaptureVideo))
+                {
+                    process.PriorityClass = ProcessPriorityClass.RealTime;
+                    process.OutputDataReceived += (sender, args) => @out.Add(args.Data);
+                    process.ErrorDataReceived += (sender, args) => err.Add(args.Data);
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+                    process.WaitForExit();
+                    int code = process.ExitCode;
+                    s?.AddTag("process.exit.code", "" + code);
+                    if (code != 0)
+                    {
+                        var tags = new ActivityTagsCollection();
+                        tags.Add("exception.type", "Non-zero exit code");
+                        tags.Add("exception.message", "" + code);
+                        s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
+                        throw new Exception("Non-zero exit code: " + code);
+                    }
+                }
+                if (!File.Exists(filename))
                 {
                     var tags = new ActivityTagsCollection();
-                    tags.Add("exception.type", "Non-zero exit code");
-                    tags.Add("exception.message", "" + code);
+                    tags.Add("exception.type", "File error");
+                    tags.Add("exception.message", "File " + filename + " does not exist");
                     s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
-                    throw new Exception("Non-zero exit code: " + code);
+                    throw new Exception("File does not exist: " + filename);
                 }
             }
-            if (!File.Exists(filename))
+            finally
             {
-                var tags = new ActivityTagsCollection();
-                tags.Add("exception.type", "File error");
-                tags.Add("exception.message", "File " + filename + " does not exist");
-                s?.AddEvent(new ActivityEvent("exception", default(DateTimeOffset), tags));
-                throw new Exception("File does not exist: " + filename);
+                s?.AddTag("output_duplication.out", string.Join('\n', @out));
+                s?.AddTag("output_duplication.err", string.Join('\n', err));
             }
         }
         return filename;
