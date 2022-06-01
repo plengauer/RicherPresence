@@ -7,13 +7,19 @@ using System.Threading.Tasks;
 public class BlockingRevisionedQueue<T>
 {
 
+    private struct Element
+    {
+        public long Time { get; set; }
+        public T Value { get; set; }
+    }
+
     public delegate long RevisionGetter(T item);
 
     private readonly object monitor = new object();
     private readonly int maxSize;
     private readonly RevisionGetter getRevision;
     private readonly long revisionTimeout;
-    private readonly SortedList<long, T> queue = new SortedList<long, T>();
+    private readonly SortedList<long, Element> queue = new SortedList<long, Element>();
     private int revision;
 
     private long nextRevision;
@@ -77,7 +83,7 @@ public class BlockingRevisionedQueue<T>
             while (maxSize > 0 && queue.Count == maxSize) Monitor.Wait(monitor);
             long revision = getRevision.Invoke(item);
             if (revision < nextRevision) return false;
-            queue.Add(revision, item);
+            queue.Add(revision, new Element() { Time = Environment.TickCount64, Value = item });
             revision++;
             Monitor.PulseAll(monitor);
             return true;
@@ -93,15 +99,15 @@ public class BlockingRevisionedQueue<T>
             {
                 dequeuer = true;
                 while (queue.Count == 0) Monitor.Wait(monitor);
-                long end = Environment.TickCount64 + revisionTimeout;
+                long end = queue.First().Value.Time + revisionTimeout;
                 while (!queue.ContainsKey(nextRevision) && Environment.TickCount64 < end) Monitor.Wait(monitor, Math.Max(1, (int)(end - Environment.TickCount64)));
                 while (!queue.ContainsKey(nextRevision)) nextRevision++;
-                T item = queue[nextRevision];
+                Element element = queue[nextRevision];
                 queue.Remove(nextRevision);
                 nextRevision++;
                 revision++;
                 Monitor.PulseAll(monitor);
-                return item;
+                return element.Value;
             }
             finally
             {
