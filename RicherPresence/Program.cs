@@ -5,6 +5,8 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
 using Dynatrace.OpenTelemetry.Exporter.Metrics;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
 List<KeyValuePair<string, object>> dt_metadata = new List<KeyValuePair<string, object>>();
 foreach (string name in new string[] { "dt_metadata_e617c525669e072eebe3d0f08212e8f2.properties", "/var/lib/dynatrace/enrichment/dt_metadata.properties" })
@@ -50,8 +52,11 @@ if (token != null)
         .Build();
 }
 
-bool[] running = new bool[] { true };
+using ILoggerFactory factory = new LoggerFactory(new ILoggerProvider[] { new ConsoleLoggerProvider(new ConstantOptionsMonitor<ConsoleLoggerOptions>(new ConsoleLoggerOptions())) });
+ILogger logger = factory.CreateLogger("Program");
 
+logger.Log(LogLevel.Information, "Starting");
+bool[] running = new bool[] { true };
 using (Updater updater = new Updater("https://api.github.com/repos/plengauer/RicherPresence", () =>
 {
     lock (running)
@@ -63,11 +68,12 @@ using (Updater updater = new Updater("https://api.github.com/repos/plengauer/Ric
 {
     Screen screen = new DXGIOutputDuplication();
     OCR ocr = new Tesseract();
-    using var rdr2 = new RDR2RicherPresenceManager(screen, ocr, 1000);
-    using var aoe2de = new AOE2DERicherPresenceManager(screen, ocr, 1000);
-    Console.WriteLine("ready");
+    using var rdr2 = new RDR2RicherPresenceManager(factory, screen, ocr, 1000);
+    using var aoe2de = new AOE2DERicherPresenceManager(factory, screen, ocr, 1000);
+    logger.Log(LogLevel.Information, "Ready");
     lock (running)
     {
         while (running[0]) Monitor.Wait(running);
     }
+    logger.Log(LogLevel.Information, "Stopping");
 }

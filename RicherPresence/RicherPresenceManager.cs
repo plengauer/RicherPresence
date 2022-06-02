@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
+using Microsoft.Extensions.Logging;
 
 public abstract class RicherPresenceManager : RichPresenceManager
 {
@@ -18,6 +19,8 @@ public abstract class RicherPresenceManager : RichPresenceManager
     private OCR ocr;
     private int sleepTime;
     private bool deleteCaptures;
+
+    private ILogger logger;
 
     private long nextID;
     private ActivityContext? nextContext;
@@ -44,13 +47,15 @@ public abstract class RicherPresenceManager : RichPresenceManager
     private ActivitySource activities;
     private Meter meter;
 
-    public RicherPresenceManager(string name, string executable, Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base(executable)
+    public RicherPresenceManager(ILoggerFactory factory, string name, string executable, Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base(factory, executable)
     {
         this.name = name;
         this.screen = screen;
         this.ocr = ocr;
         this.sleepTime = sleepTime;
         this.deleteCaptures = deleteCaptures;
+
+        logger = factory.CreateLogger<RicherPresenceManager>();
 
         nextID = 0;
         nextContext = new ActivityContext();
@@ -74,14 +79,17 @@ public abstract class RicherPresenceManager : RichPresenceManager
 
     public override void Dispose()
     {
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Disposing");
         base.Dispose();
         meter.Dispose();
         activities.Dispose();
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Disposed");
     }
 
     protected override void Start(IRichPresence presence)
     {
         base.Start(presence);
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Starting");
         
         threadTrigger = new Thread(() => RunTrigger()) { Name = GetType().Name + " Trigger" };
         threadsCapture = new List<Thread?>();
@@ -90,21 +98,29 @@ public abstract class RicherPresenceManager : RichPresenceManager
         for (int i = 0; i < Environment.ProcessorCount; i++) threadsOCR.Add(new Thread(() => RunOCR()) { Name = GetType().Name + " OCR " + i });
         threadParse = new Thread(() => RunParse()) { Name = GetType().Name + " Parse" };
         threadUpdate = new Thread(() => RunUpdate(presence)) { Name = GetType().Name + " Update" };
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Created threads");
 
         nextID = 0;
         nextContext = new ActivityContext();
         queueCaptures.Clear();
         queueOCRs.Reset(nextID);
+        queueActivities.Clear();
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Cleared and reset queues");
 
         threadTrigger.Start();
         threadsCapture.ForEach(t => t?.Start());
         threadsOCR.ForEach(t => t?.Start());
         threadParse.Start();
         threadUpdate.Start();
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Started threads");
+
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Started");
     }
 
     protected override void Stop(IRichPresence presence)
     {
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Stopping");
+
         // working theory: OCRs are all done, because queue is filled up very fast, second queue is killed because interrupt also interurpts when somebody is waiting for a lock
         // in theory we can jsut interrupt all in any order, dont care about what is still in the queue
         // however, since the tests work on simulated data, we have to make sure all is processed correctly
@@ -114,23 +130,31 @@ public abstract class RicherPresenceManager : RichPresenceManager
         threadsCapture?.ForEach(t => t?.Interrupt());
         threadTrigger?.Join();
         threadsCapture?.ForEach(t => t?.Join());
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Stopped trigger thread and capture threads");
 
         int revision = 0;
         while (revision != (revision = queueCaptures.Revision + queueOCRs.Revision + queueActivities.Revision)) Thread.Sleep(1000 * 10);
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Queues stabilized");
 
         queueCaptures.WaitForEmpty();
         threadsOCR?.ForEach(t => t?.Interrupt());
         threadsOCR?.ForEach(t => t?.Join());
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Capture queue empty, OCR threads terminated");
+
         queueOCRs.WaitForEmpty();
         threadParse?.Interrupt();
         threadParse?.Join();
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "OCR queue empty, parse thread terminated");
+
         queueActivities.WaitForEmpty();
         threadUpdate?.Interrupt();
         threadUpdate?.Join();
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Activity queue empty, update thread terminated");
 
         queueCaptures.Clear();
         queueOCRs.Clear();
         queueActivities.Clear();
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Queues cleared and empty");
 
         threadsCapture = null;
         threadsOCR = null;
@@ -138,6 +162,7 @@ public abstract class RicherPresenceManager : RichPresenceManager
         threadUpdate = null;
 
         base.Stop(presence);
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Information, "Stopped");
     }
 
     private void RunTrigger()

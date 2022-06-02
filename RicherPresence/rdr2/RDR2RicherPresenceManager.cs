@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,7 +19,7 @@ public class RDR2RicherPresenceManager : RicherPresenceManager
     private RDR2InfoParser location;
     private RDR2ActivityDetector[] detectors;
 
-    public RDR2RicherPresenceManager(Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base("Red Dead Redemption 2", "RDR2", screen, ocr, sleepTime, limitQueues, deleteCaptures)
+    public RDR2RicherPresenceManager(ILoggerFactory factory, Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base(factory, "Red Dead Redemption 2", "RDR2", screen, ocr, sleepTime, limitQueues, deleteCaptures)
     {
         location = new RDR2LocationParser();
         detectors = new RDR2ActivityDetector[]
@@ -114,9 +115,9 @@ public class RDR2RicherPresenceManager : RicherPresenceManager
         };
     }
 
-    protected override IRichPresence CreateRichPresence()
+    protected override IRichPresence CreateRichPresence(ILoggerFactory factory)
     {
-        return new RichPresence(CLIENT_ID, STEAM_APPLICATION_ID);
+        return new RichPresence(factory, CLIENT_ID, STEAM_APPLICATION_ID);
     }
 
     protected override Discord.Activity CreateInitialActivity()

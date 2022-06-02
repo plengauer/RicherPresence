@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,7 +31,7 @@ public class AOE2DERicherPresenceManager : RicherPresenceManager
 
     private long? time;
 
-    public AOE2DERicherPresenceManager(Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base("Age of Empires II: Definitive Edition", "AoE2DE_s", screen, ocr, sleepTime, limitQueues, deleteCaptures)
+    public AOE2DERicherPresenceManager(ILoggerFactory factory, Screen screen, OCR ocr, int sleepTime, bool limitQueues = true, bool deleteCaptures = true) : base(factory, "Age of Empires II: Definitive Edition", "AoE2DE_s", screen, ocr, sleepTime, limitQueues, deleteCaptures)
     {
         name = null;
         state = null;
@@ -88,9 +89,9 @@ public class AOE2DERicherPresenceManager : RicherPresenceManager
         return CreateActivity();
     }
 
-    protected override IRichPresence CreateRichPresence()
+    protected override IRichPresence CreateRichPresence(ILoggerFactory factory)
     {
-        return new RichPresence(980440522193776690, 0);
+        return new RichPresence(factory, 980440522193776690, 0);
     }
 
     protected override Activity? ParseActivity(string text)

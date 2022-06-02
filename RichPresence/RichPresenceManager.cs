@@ -4,22 +4,27 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 public abstract class RichPresenceManager : IDisposable
 {
 
     private string processName;
+    private ILoggerFactory factory;
 
+    private ILogger logger;
     private Thread thread;
     private bool running;
 
     private object monitor;
     private bool active;
 
-    public RichPresenceManager(string processName)
+    public RichPresenceManager(ILoggerFactory factory, string processName)
     {
         this.processName = processName;
+        this.factory = factory;
 
+        logger = factory.CreateLogger<RichPresenceManager>();
         thread = new Thread(() => Run()) { Name = "Rich Presence Manager" };
         running = true;
 
@@ -44,7 +49,7 @@ public abstract class RichPresenceManager : IDisposable
         {
             while(running && !IsProcessRunning()) WaitForProcessChange();
             if (!running) return;
-            using (IRichPresence presence = CreateRichPresence())
+            using (IRichPresence presence = CreateRichPresence(factory))
             {
                 presence.Update(new Discord.Activity());
                 Start(presence);
@@ -59,7 +64,7 @@ public abstract class RichPresenceManager : IDisposable
         Thread.Sleep(1000 * 10);
     }
 
-    protected abstract IRichPresence CreateRichPresence();
+    protected abstract IRichPresence CreateRichPresence(ILoggerFactory logger);
 
     protected virtual bool IsProcessRunning()
     {
@@ -76,6 +81,7 @@ public abstract class RichPresenceManager : IDisposable
     protected virtual void Start(IRichPresence presence) {
         lock (monitor)
         {
+            logger.LogInformation("Starting");
             active = true;
             Monitor.PulseAll(monitor);
         }
@@ -86,11 +92,13 @@ public abstract class RichPresenceManager : IDisposable
         {
             active = false;
             Monitor.PulseAll(monitor);
+            logger.LogInformation("Stopped");
         }
     }
 
     public void Dispose(bool force)
     {
+        logger.LogInformation("Disposing ({0})", force ? "force" : "normal");
         if (!force)
         {
             lock (monitor)
@@ -100,10 +108,13 @@ public abstract class RichPresenceManager : IDisposable
         }
         running = false;
         thread.Join();
+        logger.LogInformation("Disposed ({0})", force ? "force" : "normal");
     }
 
     public virtual void Dispose()
     {
+        logger.LogInformation("Disposing");
         Dispose(false);
+        logger.LogInformation("Disposed");
     }
 }

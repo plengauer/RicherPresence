@@ -1,15 +1,18 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 public class RichPresence : IRichPresence
 {
     private static readonly ActivitySource ActivitySource = new ActivitySource(IRichPresence.ACTIVITY_SOURCE_NAME);
 
+    private ILogger logger;
     private Discord.Discord discord;
     private Thread thread;
     private bool active;
 
-    public RichPresence(long clientID /* https://discord.com/developers/applications */, uint steamID)
+    public RichPresence(ILoggerFactory loggerFactory, long clientID /* https://discord.com/developers/applications */, uint steamID)
     {
+        logger = loggerFactory.CreateLogger<RichPresence>();
         discord = new Discord.Discord(clientID, (ulong) Discord.CreateFlags.NoRequireDiscord);
         thread = new Thread(() => Run());
         active = true;
@@ -24,8 +27,8 @@ public class RichPresence : IRichPresence
         using var span = ActivitySource.StartActivity("discord.rich_presence.clear");
         lock (discord)
         {
-            Console.WriteLine(DateTime.Now + ": null");
-            discord.GetActivityManager().ClearActivity(null /*result => { }*/);
+            logger.Log(LogLevel.Information, "Clear");
+            discord.GetActivityManager().ClearActivity(result => { });
         }
     }
 
@@ -40,8 +43,8 @@ public class RichPresence : IRichPresence
         span?.AddTag("opentelemetry.context.size", activity.Party.Id.Length);
         lock (discord)
         {
-            Console.WriteLine(DateTime.Now + ": " + activity.Name + ", " + activity.Details + ", " + activity.State);
-            discord.GetActivityManager().UpdateActivity(activity, null /*result => { }*/);
+            logger.Log(LogLevel.Information, "Update {0}, {1}, {2}", activity.Name, activity.Details, activity.State);
+            discord.GetActivityManager().UpdateActivity(activity, result => { });
         }
     }
 

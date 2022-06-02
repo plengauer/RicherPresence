@@ -907,8 +907,9 @@ namespace Test
         private Discord.Activity[] SimulateDirectoryWithScreenshots(string directory)
         {
             List<Discord.Activity> actual = new List<Discord.Activity>();
+            ILoggerFactory factory = new LoggerFactory();
             ScreenSimulator simulator = new ScreenSimulator(directory);
-            using (RicherPresenceManager manager = new TestableRDR2RichPresenceManager(simulator, new Tesseract(), activity => actual.Add(activity)))
+            using (RicherPresenceManager manager = new TestableRDR2RichPresenceManager(factory, simulator, new Tesseract(), activity => actual.Add(activity)))
             {
                 simulator.Join();
             }
@@ -921,7 +922,7 @@ namespace Test
         {
             private Update update;
 
-            public TestableRDR2RichPresenceManager(Screen screen, OCR ocr, Update update) : base(screen, ocr, 0, false, false)
+            public TestableRDR2RichPresenceManager(ILoggerFactory factory, Screen screen, OCR ocr, Update update) : base(factory, screen, ocr, 0, false, false)
             {
                 this.update = update;
             }
@@ -936,7 +937,7 @@ namespace Test
                 Thread.Sleep(100);
             }
 
-            protected override IRichPresence CreateRichPresence()
+            protected override IRichPresence CreateRichPresence(ILoggerFactory factory)
             {
                 return new TestableRichPresence(update);
             }
