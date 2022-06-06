@@ -218,6 +218,10 @@ public abstract class RicherPresenceManager : RichPresenceManager
                     if (screenshot == null) continue;
                     if (!queueCaptures.Enqueue(new Item { Id = myID, screenshot = screenshot, context = myContext })) File.Delete(screenshot);
                 }
+                catch (ThreadInterruptedException exception)
+                {
+                    throw exception;
+                }
                 catch (Exception exception)
                 {
                     var tags = new ActivityTagsCollection();
@@ -249,6 +253,10 @@ public abstract class RicherPresenceManager : RichPresenceManager
                     item.text = ocr.Parse(item.screenshot);
                     if (item.text == null) continue;
                     queueOCRs.Enqueue(item);
+                }
+                catch (ThreadInterruptedException exception)
+                {
+                    throw exception;
                 }
                 catch (Exception exception)
                 {
@@ -288,6 +296,10 @@ public abstract class RicherPresenceManager : RichPresenceManager
                     queueActivities.Enqueue(item);
                     activity = item.activity.Value;
                 }
+                catch (ThreadInterruptedException exception)
+                {
+                    throw exception;
+                }
                 catch (Exception exception)
                 {
                     var tags = new ActivityTagsCollection();
@@ -319,6 +331,10 @@ public abstract class RicherPresenceManager : RichPresenceManager
                 try
                 {
                     presence.Update(item.activity.Value);
+                }
+                catch (ThreadInterruptedException exception)
+                {
+                    throw exception;
                 }
                 catch (Exception exception)
                 {
