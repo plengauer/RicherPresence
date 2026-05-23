@@ -6,7 +6,8 @@ on:
       - .github/workflows/copilot-setup-steps.yml
       - Autoversion
       - CodeQL
-      - Copilot code review
+      - Copilot
+      - Copilot cloud agent
       - Copilot coding agent
       - Recompile Agentic Workflows
       - Renovate
