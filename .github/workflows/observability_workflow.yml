@@ -11,6 +11,7 @@ on:
       - Copilot coding agent
       - Recompile Agentic Workflows
       - Renovate
+      - Report Failed Workflows
     types:
       - completed
 jobs:
