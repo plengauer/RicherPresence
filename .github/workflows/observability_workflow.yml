@@ -5,10 +5,12 @@ on:
     workflows:
       - .github/workflows/copilot-setup-steps.yml
       - Autoversion
+      - Claude
       - CodeQL
       - Copilot
       - Copilot cloud agent
-      - Copilot coding agent
+      - Copilot code review
+      - OpenAI Codex
       - Recompile Agentic Workflows
       - Renovate
       - Report Failed Workflows
