@@ -6,30 +6,30 @@ on:
     - cron: '0 0 1 * *'
   push:
     branches:
-      - main
-      - master
+      - 'release/v*.*'
+
+concurrency:
+  group: bump-version-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  autoversion:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+  bump:
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v4
+      - uses: plengauer/opentelemetry-github/actions/instrument/job@af83be0ddf1ec3035230c030f3ab6d10a7040515
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
         with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
+          secrets_to_redact: |-
+            ${{ github.token }}
+            ${{ secrets.ACTIONS_GITHUB_TOKEN || github.token }}
+            ${{ secrets.OPENAI_TOKEN }}
+      - uses: plengauer/autoversion@badee98ba4eb3a38f99cf8acab7f5510e7e8736f # v5.0.0
         with:
-          node-version: '18'
-      - name: Run autoversion
-        run: |
-          npm install -g autoversion
-          autoversion
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          commit-message: 'chore: autoversion bump'
-          title: 'chore: autoversion bump'
-          body: 'Automated version bump'
-          branch: autoversion/bump
+          github_token: ${{ secrets.ACTIONS_GITHUB_TOKEN || github.token }}
+          openai_token: ${{ secrets.OPENAI_TOKEN }}
+          increments: ${{ github.ref_name == 'main' && 'major;minor' || 'patch' }}
+    permissions:
+      actions: read
