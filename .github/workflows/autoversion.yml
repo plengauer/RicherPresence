@@ -1,0 +1,35 @@
+name: Autoversion
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  autoversion:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Run autoversion
+        run: |
+          npm install -g autoversion
+          autoversion
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'chore: autoversion bump'
+          title: 'chore: autoversion bump'
+          body: 'Automated version bump'
+          branch: autoversion/bump
