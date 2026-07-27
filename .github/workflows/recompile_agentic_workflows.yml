@@ -27,7 +27,7 @@ jobs:
           secrets_to_redact: |-
             ${{ github.token }}
             ${{ secrets.ACTIONS_GITHUB_TOKEN }}
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
       - env:
           GH_TOKEN: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
         run: |
