@@ -16,7 +16,7 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
     <PackageReference Include="OpenTelemetry" Version="1.2.0-rc1" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.2.0-rc1" />
-	<PackageReference Include="Dynatrace.OpenTelemetry.Exporter.Metrics" Version="0.4.0-beta" />
+	<PackageReference Include="Dynatrace.OpenTelemetry.Exporter.Metrics" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>
